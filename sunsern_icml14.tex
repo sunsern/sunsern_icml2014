@@ -76,61 +76,60 @@ TODO
 \section{Introduction}
 \label{sec:intro}
 
-Consider a supervised classification problem where there are $M$
-classes and $n$ training examples per class. In $k$-NN, the label of a
-novel test example is predicted by the majority of labels of the
-training examples in the neighborhood of size $k$. Fix and Hodges
-shows that, asypmtotically, the optimal error rate can be achieved by choosing a large
-enough $k$ but small compared to $n$. Additionaly, Cover and Hart
-shows that, when $k = 1$, the error rate $r$ is upperbounded by $r^*(2
-- \frac{M}{M-1}r^*)$. Nonetheless, in non-asymptotic scenarios, there
-is no guarantee of how the k-NN will perform.
+Consider a supervised classification problem where there are $m$
+classes and $n$ training examples per class. Given an example from an
+unknown class, the traditional $k$-nearest neighbor algorithm ($k$-NN)
+predicts the class label with the majority of labels in the
+neighborhood of size $k$ of the training data. Fix and Hodges~\cite{}
+shows that, asymptotically, the $k$-NN algorithm achieves the optimal
+error rate by choosing a large enough $k$ but small compared to
+$n$. Nonetheless, in the small sample scenario, there is no guarantee
+of how well the $k$-NN algorithm will perform.
 
-We propose a new inference method for the k-NN algorithm which is
-potentially applicable to other algorithm as well. The proposed method
-involves considering the entire distribution of labels in the
-neighborhood instead of just the majority. While the majority rule
-works in most cases, it completely ignores the non-maximum classes which, in some case, can
-contain crucial information. For example, consider the following
-hypothetical scenario. Suppose the data of class 1 and of class 3
-often get confused with each other. For some reason, the data of class
-1 never have the data of class 2 in their neighborhood, but this is
-not the case for the data of class 3. We are given a novel point whose
-neighborhood indicates that this point belongs to either class 1 or
-class 3 with class 1 being the majority. Additionally, the data from
-class 2 are also observed in the neighborhood. The classic $k$-NN
-predicts the majority class which class 1. However, we have the
-additional information about the presence of class 2 in the
-neighborhood which suggests otherwise.
+Additionaly, Cover and Hart~\cite{} shows that, when $k = 1$, the
+aymptotic error rate $r$ is upperbounded by $r^*(2 -
+\frac{m}{m-1}r^*)$ where $r^*$ is the optimal error rate. This result
+suggests that at least a half of the information regarding the class
+label is contained in the nearest neighbor. Therefore, the rest of the
+class information must lie inside the neighborhood of the example. 
 
-We present results from both synthetic data and real datasets. We
-obtain a hugh improvement on uRight dataset and a small improvement on
-MNIST and SVHN dataset.
+In this paper, we propose a modification to the $k$-NN algorithm which
+potential leverages the additional information from the neighborhood
+to improve the classification accuracy. Our approach involves
+considering the entire distribution of labels in the neighborhood
+instead of just the majority. While the majority rule works in most
+cases, it completely ignores the information from the minority classes
+which, in some case, can contain crucial information. To motivate our
+approach, consider the following hypothetical scenario. Suppose the
+examples of class A and of class C often get confused with each
+other. Moreover, the examples of class B never appear in the
+neighborhood of the examples of class A, but the examples of C often
+appear in the neighborhood of the examples of class A. We are given a
+new example whose neighborhood indicates that it is belonged to either
+class A or class C with class A being the majority. Additionally, in
+the neighborhood, a few examples of class B are observed. The
+traditional $k$-NN algorithm will predict the majority class which
+class A. However, based on the presence of class B in the
+neighborhood, a better prediction would have been class C.
 
-\section{Related Work}
-\label{sec:related}
+In some sense, our approach is related to previous work on learning
+label embeddings.~ \cite{Singh-Miller and Collins}, \cite{Dietterich
+  Bakiri}, \cite{Allwien, Schapire, Singer}, \cite{Samy Bengio}. The
+main difference is that our approach is far more simple , does not
+require convex optimization and seemlessly integrated into the $k$-NN
+framework. Another related work is \cite{Bilmes} which introduces a
+bias term to the likelihood ratio testing that is justified by the
+different between the estimated and the true class conditional
+probability. 
 
-Work that uses label structure
+This paper is organized as follows. In Section~\ref{}, we describe our
+approach as well as the analysis of how we justify our algorithm. In
+Section~\ref{}, we present experiments comparing our approach with the
+traditional $k$-NN algorithm using both synthetic data and real-world
+data. Then, we discuss the results in Section~\ref{} and conclude the
+paper in Section~\ref{}.
 
-* The closest to this work is ``Learning label embeddings for
-nearest-neighbor multi-class classification with an application to
-speech recognition'' by Nathsha Singh-Miller and Michael Collins. In
-that paper, they proposed a method for learning label embeddings based
-on ECOCs. The difference is how the label embeddings is learned and
-used.
-
-* Error-correcting output codes by Dietterich and Bakiri. Another
-related paper is ``reducing multiclass to binary: A unify approach for
-Margin classifiers'' by Allwien, Schapire, Singer.
-
-Samy Bengio's work on label embedding tree.
-
-Work that suggest alternatives to likelihood-ratio test.
-
-* Intransitive likelihood-ratio classifiers by Bilmes, Ji and Meila.
-
-
-\section{Background}
+\section{MinKL Approach}
 
 \newcommand{\X}{\mathcal{X}}
 \newcommand{\Y}{\mathcal{Y}}
@@ -146,67 +145,61 @@ each label $y_i$ takes on a value from $\{1,2,\ldots,m\}$.
 Let $\nh_k(x)$ denote the neighborhood of size $k$ of an example $x
 \in \X$ with respect to the metric $d$. The traditional $k$-NN
 algorithm predicts the label of an example $x$ with the majority of
-the labels in $nh_k(x)$. When $n \rightarrow \infty$ and $k$ is large
-but, at the same time, small with respect to $n$, this decision rule is
-in fact optimal~\cite{Fix and Hodges}. However, there is no such
-guarantee for finite $n$.
-
-Suppose the true class label $y$ of an example $(x,y)$ is drawn from a fixed
-but unknown distribution $p$ whose support is the set of all possible
-labels. Using the $k$-NN algorithm, we can estimate $p$ with an
-empirical distribution $P$ defined by
+the labels in $nh_k(x)$. Suppose the true class label $y$ of an
+example $(x,y)$ is drawn from a fixed but unknown distribution $p$
+whose support is the set of all possible labels. Using the $k$-NN
+algorithm, we can estimate $p$ with an empirical distribution $P$
+defined by
 \[
 P(y|x) = \frac{\#\{ \mbox{occurrences of label } y \mbox{ in } \nh_k(x)\}}{k}
-\]. 
-It is easy to see that the majority vote rule is equivalent to the
-maximum likelihood estimate of the true label assuming the posterior
-distribution is given by $P(y|x)$. Specifically, the predicted label
-$\hat{y}$ is given by
+\].  It is easy to see that the majority vote rule is equivalent to
+the predicting with the maximum likelihood estimate of the true label
+assuming the posterior distribution is given by
+$P(y|x)$. Specifically, the predicted label $\hat{y}$ is given by
 \[
 \hat{y} = \arg\max_y P(y|x)
 \]
 
-Under some conditions, the majority rule is clearly sub-optimal
-because the prediction is made based entirely on the maximal value of
-the distribution $P$. Sometimes, the information about the
-true label can be found in the minority of the neighborhood. For
-example, suppose we know that the examples from class A never appears
-in the neighborhood of examples from class B and examples from class B
-and class C are often confusable. Given a test example $x$ that we
-want to identify its class, we estimate $P(B | x) = 0.45$ and $P(C |
-x) = 0.4$. However, we observe a number of examples from class A in
-the neightborhood of $x$. The majority rule will predict class B
-disregarding the additional information that we have and lead to a
-wrong prediction.
+When $n$ is finite, the majority rule can be sub-optimal because the
+prediction is made based entirely on the maximum value of the
+empirical distribution $P$, which is potentially different from the
+true distribution $p$. Sometimes, the class information can be
+contained in the non-maximum values of $P$. For example, suppose we
+are told that the examples from class A never appears in the
+neighborhood of examples from class B and examples from class B and
+class C are often confusable. Given a test example $x$, we estimate
+$P(B | x) = 0.45$ and $P(C | x) = 0.4$. However, we observe a number
+of examples from class A in the neightborhood of $x$. The majority
+rule will predict class B disregarding the additional information that
+we have and could lead to an incorrect prediction.
 
-To address this problem, we would like to modify the $k$-NN algorithm
-so that it takes into account the entire distribution of $P$ instead
-of just the maximum coordinate of $P$. One way to achieve this is to
-measure the distance from $P$ to each of the prototypical
-distributions of each class and to predict with the class whose
-distance is minimized. Let $Q_j$ denote the prototypical distribution
-for class label $j$. We can think of $Q_j$ as a distribution that
-describes the probability that an example from class $j$ get confused
-with other classes. A natural distance measure of two distributions is
-KL-divergence. Our algorithm is summaried in Algorithm 1.
-
-Under certain assumptions, it can be shown that using $KL$ divegence
-is the right thing to do. For any example $(x,y)$, suppose that the class label $y$ is
-generated by the following two-step process. First, $j$ is drawn
-uniformly from the set $\{1,2,...,m\}$. Then, the class label $y$ is
-then drawn from a fixed but unknown distribution $Q_j$. With these
-assumptions, we can show that the maximum likelihood estimate of the class
-label is the same as the class label estimated by minimizng the KL
-divergence.
-  
 \newcommand{\dkl}{D_{\mathrm{KL}}}
 
-We define the following shorthand notations:
-\begin{enumerate}
-\item Let $y^k = [y_1, \ldots, y_k]$ denote a sample of size $k$ drawn
-  IID from an unknown distribution whose support is $\Y$
-\item Let $P_{y^k}$ denote a distribution over $\Y$ induced by the sample
-  $y^k$. Specifically,
+To address this problem, we propose a modification to the $k$-NN
+algorithm so that it takes into account the entire distribution of $P$
+instead of just the maximum coordinate of $P$. We achieve this by
+constructing a prototypical distribution for each class. Let $Q_j$
+denote the prototypical distribution for class $j$. We can think of
+$Q_j$ as a distribution that describes the probability that an example
+from class $j$ get confused with other classes. Then, the prediction
+is made by minimizing the the distance from $P$ to each of the
+prototypical distribution of each class. A simple measure of
+difference between any two distributions can be given by the KL
+divergence, which is defined as,
+\[
+\dkl(p || q) = \sum_i p_i \log(\frac{p_i}{q_i})
+\]. 
+
+Under certain assumptions, we can show that the class label predicted
+by minimizing the KL divergence is the same as the maximum likelihood
+estimate (MLE). For any example $(x,y)$, suppose that the class label $y$ is
+generated by the following two-step process. First, $j$ is drawn
+uniformly from the set $\{1,2,...,m\}$. Then, the class label $y$ is
+then drawn from a fixed but unknown distribution $Q_j$. Let $y^k =
+[y_1, \ldots, y_k]$ denote a sample of size $k$ drawn IID from an
+unknown distribution whose support is the set of all possible
+labels. Let $P_{y^k}$ denote a distribution 
+induced by the sample $y^k$. Specifically,
 \[
 P_{y^k}(a) = \frac{\#\{ \mbox{occurrences of } a \mbox{ in } y^k\}}{k}
 \]
@@ -232,7 +225,6 @@ P(y^k|Q) = 2^{-k(H(P_{y^k}) + \dkl(P_{y^k} || Q))}
   \end{align*}
 \end{proof}
 
-
 \begin{collorary}
 \label{col:min_dkl}
 Given a set of distributions $\mathcal{Q} = \{Q_1, Q_2, \ldots,
@@ -254,92 +246,243 @@ KL-divergence from $P_{y^k}$.
   \end{align*}
 \end{proof}
 
-
-\section{Choice of $\mathcal{Q}$}
-
-The next question is how should we select the prototypical
-distribution $Q_j$. We will consider two natural choices. 
-
-\subsection{Maximum Chernoff Information (MCI)}
-The idea is to find $\mathcal{Q}$ such that the KL-divergence between
-any two distributions $Q_i$ and $Q_j$ is maximized.
-
-A simple solution to this is
+Next, we justify how to select the prototypical distribution $Q_j$
+given a set of training examples $\S$. Let $L_k(x)$ denote a sequence
+of labels from the neighborhood of size $k$ of the example $x$. A
+natural choice is to choose $Q_j$ so that it maximizes the likelihood
+of the examples in the training set. More specifically, we want to
+solve for $Q_j$ such that, for each label $j \in \{1,2,...,m\}$,
 \[
-Q_i(j) = \delta_i(j)
+\mbox{maximize } \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) \mbox{ subject to } \sum_{i} Q_j(i) = 1 
 \]
-where $\delta_i(j) = \begin{cases} 1 &\mbox{ if } j = i\\ 0 &\mbox{ otherwise} \end{cases}$
+where $\S_j = \{ (x,y) \in \S | y = j\}$. We can solve the above program by using Lagrange multipliers,
+\[
+\nabla_{Q_j(a),\lambda} \left[ \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) + \lambda \sum_{i} Q_j(i) \right] = 0
+\]
+Let $P_x$ denote the empirical distribution over the labels induced by
+$L_k(x)$. Using Lemma~\ref{lemma:1}, for each $a$,
+\[
+\frac{\partial}{\partial Q_j(a)} \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) + \lambda
+(\sum_{i} Q_j(i)) = \sum_{(x,y) \in \S_j} k \frac{P_x(a)}{Q_j(a)} + \lambda = 0
+\]
+or
+\[
+Q_j(a) = \frac{k}{\lambda} \sum_{(x,y) \in \S_j} P_x(a)
+\]
+Since $\sum_{i} Q_j(i) = 1$, we have
+\begin{align*}
+\sum_{a} \frac{k}{\lambda} \sum_{(x,y) \in \S_j} P_x(a) &= 1\\
+\frac{k}{\lambda} \sum_{a} \sum_{(x,y) \in \S_j} P_x(a) &= 1\\
+\frac{k}{\lambda} \sum_{(x,y) \in \S_j} \sum_{a} P_x(a) &= 1\\
+\frac{k}{\lambda} |\S_j| &= 1\\
+\lambda &= |\S_j|k\\
+\end{align*}
+Plugging $\lambda$ back in,
+\[
+Q_j(a) = \frac{\sum_{(x,y) \in \S_y} P_x(a)}{|\S_j|}
+\]
+In other words, the likelihood is maximized when $Q_j$ is simply the
+mean of the posterior estimates over examples from class $j$. The
+complete algorithm is given in Algorithm~\ref{alg:minkl}
 
-When $\mathcal{Q}$ is MCI, for any distribution $P$, the minimizing
+\begin{algorithm}
+\caption{The MinKL $k$-NN algorithm}
+\label{alg:minkl}
+\begin{algorithmic}[1]
+\REQUIRE{A training set $\S$ \\ A sequence of the label in
+  the neighborhood of size $k$ of $x$, $L_k(x)$. \\ A test example
+  $\hat{x}$}
+\FOR{$i \in \{1,2,...,m\}$}
+\STATE $Q_i \leftarrow [0]^m$
+\ENDFOR
+\FOR{Each example $(x,y) \in \S$}
+\STATE $P_x \leftarrow $ the empirical distribution induced by $L_k(x)$.
+\STATE $Q_y \leftarrow Q_y + P_x$
+\ENDFOR
+\FOR{$i \in \{1,2,...,m\}$}
+\STATE $Q_i \leftarrow Q_i / |\S_i|$
+\ENDFOR
+\STATE $P_{\hat{x}} \leftarrow $ the empirical distribution induced by $L_k(\hat{x})$.
+\STATE $prediction = \arg\min_i \dkl(P_\hat{x} || Q_i)$
+\end{algorithmic}
+\end{algorithm}
+
+Another potential choice of $Q_j$ is 
+\[
+Q_j(i) = \delta_j(i)
+\]
+where $\delta_j(i) = \begin{cases} 1 &\mbox{ if } j = i\\ 0 &\mbox{ otherwise} \end{cases}$.
+By using this $Q_j$, for any distribution $P$, the minimizing
 KL-divergence decision rule reduces to the majority decision rule.
 \begin{align*}
 \arg\min_i \dkl(P||Q_i) &= \arg\min_i -\sum_{j} P(j) \log Q_i(j)\\
  &= \arg\max_i P(i)\\
 \end{align*}
 
+\section{Experiments}
 
-\subsection{Maximum Likelihood Estimate (MLE)}
+In this section, we describe experiments we have performed with both
+synthetic data and real-world data. Our primary goal is to compare the
+classification errors our proposed algorithm (MinKL) with thos of the
+traditional $k$-NN algorithm (Majority) under various conditions. 
+As for the real-world data, we performed our experiments on two
+digit classification datasets: MNIST, SVHN and an online character
+recognition dataset: uRight.
 
-Given a training data $\D = \{(x_1,y_1,\ldots,(x_n,y_n)\}$ and the
-label neighborhood of size $k$ for each $x_i$, $L_k(x)$, we want to
-find $\mathcal{Q}$ that satisfies the following constaint. For each $y
-\in \Y$, 
-\[
-\mbox{maximize } \sum_{(x,y) \in \D_y} \log P(L_k(x)|Q) \mbox{ subject to } \sum_{j} Q(j) = 1 
-\]
-where $\D_y = \{(x_i,y_i) | (x_i,y_i) \in \D \wedge y_i = y\}$
+\begin{table}[t]
+\caption{A summary of the datasets}
+\label{table:datasets}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{lcccr}
+\hline
+\abovespace\belowspace
+Dataset & No. of classes & validation \\
+\hline
+\abovespace
+Synthetic-1   & 10 & 5-fold \\
+Synthetic-2 & 81 & 5-fold\\
+\belowspace
+MNIST & 10 & test set provided\\
+SVHN & 10 & test set provided\\
+uRight & 26 & 5-fold\\
+\hline
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 
-Using Lagrange multiplier,
-\[
-\nabla_{Q(i),\lambda} \left[ \sum_{(x,y) \in \D_y} \log P(L_k(x)|Q) + \lambda \sum_{j} Q(j) \right] = 0
-\]
+\subsection{Synthetic data}
+Our synthetic data can be described as follows. Each instance is a
+point in a taurus-like $d$-dimensional hypercube $[0,b-1]^d$. There is
+a total of $b^d$ classes and the instances of each class are generated
+by a normal distribution with mean located at an integer lattice point
+of the hypercube and a covariance matrix $\sigma I_d$. Figure~\ref{}
+shows a 2-d representation of each class where $b=5, d= 2$ and $\sigma
+= 0.5$. We use Manhattan distance as the similarity measure for the
+$k$-NN algorithm.
 
-Let $P_x$ denote the empirical distribution over the labels induced by
-$L_k(x)$. Using Lemma~\ref{lemma:1}, for each $i$,
-\[
-\frac{\partial}{\partial Q(i)} \sum_{(x,y) \in \D_y} \log P(L_k(x)|Q) + \lambda
-(\sum_{j} Q(j)) = \sum_{(x,y) \in \D_y} k \frac{P_x(i)}{Q(i)} + \lambda = 0
-\]
-or
-\[
-Q(i) = \frac{k}{\lambda} \sum_{(x,y) \in \D_y} P_x(i)
-\]
-Since $\sum_{j} Q(j) = 1$, we have
-\begin{align*}
-\sum_{j} \frac{k}{\lambda} \sum_{(x,y) \in \D_y} P_x(j) &= 1\\
-\frac{k}{\lambda} \sum_{j} \sum_{(x,y) \in \D_y} P_x(j) &= 1\\
-\frac{k}{\lambda} \sum_{(x,y) \in \D_y} \sum_{j} P_x(j) &= 1\\
-\frac{k}{\lambda} |\D_y| &= 1\\
-\lambda &= |\D_y|k\\
-\end{align*}
-Plugging $\lambda$ back in,
-\[
-Q(i) = \frac{\sum_{(x,y) \in \D_y} P_x(i)}{|\D_y|}
-\]
-
-This shows that the MLE of $Q_i$ is simply the mean of the posterior
-estimates of class $i$.
+In the first experiment, we generate a dataset, called Synthetic-1,
+using $b=10, d=1$ and $\sigma=1.5$. There is a total of 10 classes in
+Synthetic-1. In Figure~\ref{} , we show the 5-fold cross validation
+error rate of MinKL and Majority using different $n$ and $k$. Using
+the optimal $k$ for each $n$, we compare the error rates of MinKL,
+Majority and the Bayes optimal classifier at different $n$ in
+Figure~\ref{}. 
 
 
-\section{Experimental Results}
+Next, we generate a more complex dataset, called Synthetic-2, using
+$b=3$, $d=4$ and $\sigma=0.4$. This results in a total of $81$ different
+classes. Again, in Figure~\ref{}, we show the 5-fold cross validation
+error rate of MinKL and Majority using different $n$ and $k$ and
+compare the error rate of MinKL, Majority and Bayes optimal at
+different $n$ while $k$ is optimized.
 
-\subsection{Synthetic dataset}
 
-\subsection{Real-world dataset}
+\subsection{MNIST}
+Each instance in the MNIST dataset~\cite{} is a 28x28 grayscale image. There
+are 60000 training examples and 10000 testing examples. The dataset
+has been widely used as a benchmark for classification algorithms. We
+prepropress the data by deskewing, resampling the images down to
+14x14 pixels, and applying PCA. We transform each image into a feature
+vector which is the top 100 PCA components. We use Euclidean distance
+as the similarity measure for the $k$-NN algorithm.
+
+The results are summarized in Figure~\ref{}. 
+
+\subsection{SVHN}
+The SVHN dataset~\cite{} contains images of digits taken from the Google
+street view data. It is considered a harder dataset than the
+MNIST. Each instance in the SVHN dataset is a 32x32 RGB image
+patch. There are 73257 training examples and 26032 testing
+examples. We preprocess the images by deskewing and then extract the
+HOG features~\cite{} from the images. We use Manhattan distance as the
+similarity measure of the $k$-NN algorithm.
+
+The results are summarized in Figure~\ref{}.
+
+\subsection{uRight}
+The uRight dataset is our dataset of handwriting trajectories of
+English characters. Each example is a sequence of $(x,y)$-coordinates
+representing an English letter. We collected this data from 20
+different users writing on a touch screen of a mobile phone. There is
+a total of about 10000 examples. The similarity between any two
+examples is measured by the dynamic time wraping distance between
+them~\cite{}.
+
+We performed the analysis for each user. The 5-fold cross validation
+results are shown in Figure~\ref{}.
 
 \section{Discussion}
 
-Why does this work?
+From the experiments, we noticed that MinKL approach performs
+significantly better than Majority in the small sample situation. As
+the number of training examples increases, the gap of the performance
+of the two approaches decreases. We anticipated this since the
+Majority vote rule is proven to be optimal asymptotically. In some
+applications, it is crucial to perform well even when there are only a
+few training examples. This is where we believe that our approach has
+advantage over the majority vote.
 
-When does this work?
+In analysis, we have shown that our approach is optimal when the data
+is generated under certain assumptions. For real-world data,
+such assumptions may or may not hold. Nonetheless, we can see some
+improvements in our experiments. We suspect that our approach will be
+more beneficial to problems with a large number of classes and the
+confusions between classes are non-uniform. 
 
-When does this not work?
+In a sense, our approach naturally incoporates the infomation from the
+label space into the classification. The label space information is
+encoded into the prototypical neighborhood distribution. The
+performance of our approach depends on how
+different the prototypical neighborhood distributions of different
+classes are. If the prototypical distributions are similar, then our
+approach will suffer. A workaround is to have multiple prototypical
+distributions per class. 
 
+Our approach does not have a consistency gaurantee. It is
+possible that our approach will be sub-optimal when the number of
+training examples goes to infinity because the prototypical
+distribution model is incorrect or insufficent. We do not worry
+about this problem that much since we see our approach being used
+in a small sample scenario.
+
+In practice, other divergences might work better than the KL
+divergence. The KL divergence is considered a special case of a
+more general divergence function called Alpha-divergence which is
+given by
+\[
+D^{(\alpha)}_A (p||q) = \frac{1}{\alpha(\alpha - 1)}\left( \sum_1^n
+  p^{\alpha}_i q^{1-\alpha}_i - 1\right), \; \alpha \in \mathrm{R} \ \{0,1\}
+\]
+The KL-divergence can be expressed as $D_{KL} (p || q) = \lim_{\alpha
+\rightarrow 1} D^{(\alpha)}_A (p || q)$. 
+For uRight dataset, we were able to obtain better classification
+accuracy by using Alpha-divergence with $\alpha = 2$.
+
+Our approach can be applied to other classification algorithms as
+well. The $k$-NN algorithm is very computational expensive when
+classifying a new example. For some applications, it is
+important to be able to classify new examples quickly. A simple
+modification to the $k$-NN algorithm is to keep a small number of
+representatives for each class and discard the rest. This algorithm is
+called the $k$ nearest-centroid algorithm ($k$-NC) where only the
+$k$-centroids are kept as the class representatives. In the $k$-NC,
+the class posterior distribution can be estimating by
+\[
+p(y|x) = \frac{e^{d(x,C(y))}}{\sum_j e^{d(x, C(j))} }
+\]
+We can apply the MinKL technique to the class posterior computed this
+way. In Figure~\ref{}, we compare the accuracy of the $k$-NC algorithm
+with MinKL and Maximum (equavalent to Majority in the $k$-NN).
 
 \section{Conclusions}
 
-We suggest a modification to k-NN algorithm that incorporates 
-
+We suggest a simple modification to the $k$-NN algorithm.
 
 \bibliography{example_paper}
 \bibliographystyle{icml2014}
