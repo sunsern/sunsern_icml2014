@@ -21,6 +21,10 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
 % As of 2011, we use the hyperref package to produce hyperlinks in the
 % resulting PDF.  If this breaks your system, please commend out the
 % following usepackage line and replace \usepackage{icml2014} with
@@ -30,6 +34,13 @@
 % Packages hyperref and algorithmic misbehave sometimes.  We can fix
 % this with the following command.
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+\newcommand{\YFcomment}[1]{\marginpar{\footnotesize{{\bf YF:} #1}}}
+\newcommand{\SCcomment}[1]{\marginpar{\footnotesize{{\bf SC:} #1}}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{collorary}[theorem]{Collorary}
 
 % Employ the following version of the ``usepackage'' statement for
 % submitting the draft version of the paper for review.  This will set
@@ -48,7 +59,7 @@
 \begin{document} 
 
 \twocolumn[
-\icmltitle{Exploiting the Hidden Information in the Labels}
+\icmltitle{TBD}
 
 % It is OKAY to include author information, even for blind
 % submissions: the style file will automatically remove it for you
@@ -76,43 +87,55 @@ TODO
 \section{Introduction}
 \label{sec:intro}
 
-Consider a supervised classification problem where there are $m$
-classes and $n$ training examples per class. Given an example from an
-unknown class, the traditional $k$-nearest neighbor algorithm ($k$-NN)
-predicts the class label with the majority of labels in the
-neighborhood of size $k$ of the training data. Fix and Hodges~\cite{}
-shows that, asymptotically, the $k$-NN algorithm achieves the optimal
-error rate by choosing a large enough $k$ but small compared to
-$n$. Nonetheless, in the small sample scenario, there is no guarantee
-of how well the $k$-NN algorithm will perform.
+We consider the $k$-nearest neighbor ($k$-NN) classification rule for
+multiclass classification problems where the number of classes $m >
+2$. Given a set of training examples, the $k$-NN rule predicts the
+label of a new example with the majority of the class labels among its
+$k$ nearest neighbors. Fix and Hodges~\cite{Fix1951} show that,
+asymptotically, the $k$-NN rule achieves the Bayes error rate by
+choosing a large enough $k$ but small compared to the number of
+examples $n$. Nonetheless, when $n$ is small, there is no guarantee of
+how well the $k$-NN algorithm will perform. 
 
-Additionaly, Cover and Hart~\cite{} shows that, when $k = 1$, the
-aymptotic error rate $r$ is upperbounded by $r^*(2 -
-\frac{m}{m-1}r^*)$ where $r^*$ is the optimal error rate. This result
-suggests that at least a half of the information regarding the class
-label is contained in the nearest neighbor. Therefore, the rest of the
-class information must lie inside the neighborhood of the example. 
+Additionaly, Cover and Hart~\cite{Cover1967} show that, when $k = 1$,
+the aymptotic error rate of the $1$-NN rule is upperbounded by $r^*(2
+- \frac{m}{m-1}r^*)$ where $r^*$ denotes the Bayes error rate. This
+result suggests that at least a half of the class information is
+contained in the nearest neighbor. When the nearest neighbor does not
+have all of the class information, it is possible that the missing
+class information could be extracted from other examples in the
+neighborhood.
 
-In this paper, we propose a modification to the $k$-NN algorithm which
-potential leverages the additional information from the neighborhood
-to improve the classification accuracy. Our approach involves
-considering the entire distribution of labels in the neighborhood
-instead of just the majority. While the majority rule works in most
-cases, it completely ignores the information from the minority classes
-which, in some case, can contain crucial information. To motivate our
-approach, consider the following hypothetical scenario. Suppose the
-examples of class A and of class C often get confused with each
-other. Moreover, the examples of class B never appear in the
-neighborhood of the examples of class A, but the examples of C often
-appear in the neighborhood of the examples of class A. We are given a
-new example whose neighborhood indicates that it is belonged to either
-class A or class C with class A being the majority. Additionally, in
-the neighborhood, a few examples of class B are observed. The
-traditional $k$-NN algorithm will predict the majority class which
-class A. However, based on the presence of class B in the
-neighborhood, a better prediction would have been class C.
+In this paper, we propose a modification to the $k$-NN rule which
+potentially leverages additional information from the non-majority
+class labels in the neighborhood to improve the classification
+accuracy. Our approach makes a prediction based on the entire
+distribution of the class labels in the neighborhood instead of just
+the majority. While the majority rule works well in most cases, it
+completely ignores the information from the minority classes which, in
+some cases, can contain crucial information.
 
-In some sense, our approach is related to previous work on learning
+To motivate our approach, consider the following example. Suppose
+there are 3 classes and the examples of each class is generated
+according to a normal distribution depicted by
+Figure~\ref{fig:toy_example}. Even though the example $x$ in
+Figure~\ref{fig:toy_example} is of class A but it is likely that the
+majority of class lables in the neighbor of $x$ is class B. In such
+case, the majority rule will predict class B. However, if we consider the rest
+of the examples in the neighborhood of $x$ and we rarely observe
+examples from class C, then a better prediction would have been class A.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{icml_numpapers}}
+\caption{Toy example}
+\label{fig:toy_example}
+\end{center}
+\vskip -0.2in
+\end{figure} 
+
+Our approach can be related to work on learning
 label embeddings.~ \cite{Singh-Miller and Collins}, \cite{Dietterich
   Bakiri}, \cite{Allwien, Schapire, Singer}, \cite{Samy Bengio}. The
 main difference is that our approach is far more simple , does not
@@ -134,10 +157,10 @@ paper in Section~\ref{}.
 \newcommand{\X}{\mathcal{X}}
 \newcommand{\Y}{\mathcal{Y}}
 \newcommand{\D}{\mathcal{D}}
-\newcommand{\S}{\mathcal{S}}
+\newcommand{\trainset}{\mathcal{S}}
 \newcommand{\nh}{\mathcal{N}}
 
-Let $\S = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of training
+Let $\trainset = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of training
 examples where each instance $x_i$ belongs to a domain $\X$ with a
 metric $d(\cdot,\cdot)$. Without loss of generality, we assume that
 each label $y_i$ takes on a value from $\{1,2,\ldots,m\}$. 
@@ -178,7 +201,13 @@ we have and could lead to an incorrect prediction.
 To address this problem, we propose a modification to the $k$-NN
 algorithm so that it takes into account the entire distribution of $P$
 instead of just the maximum coordinate of $P$. We achieve this by
-constructing a prototypical distribution for each class. Let $Q_j$
+constructing a prototypical distribution for each class. 
+
+\[
+Q_i = \int P(y=i|X=x)P(x=X) \vec{P}(y|x=x)
+\]
+
+Let $Q_j$
 denote the prototypical distribution for class $j$. We can think of
 $Q_j$ as a distribution that describes the probability that an example
 from class $j$ get confused with other classes. Then, the prediction
@@ -203,7 +232,6 @@ induced by the sample $y^k$. Specifically,
 \[
 P_{y^k}(a) = \frac{\#\{ \mbox{occurrences of } a \mbox{ in } y^k\}}{k}
 \]
-\end{enumerate} 
 
 \begin{lemma}
 \label{lemma:1}
@@ -247,39 +275,39 @@ KL-divergence from $P_{y^k}$.
 \end{proof}
 
 Next, we justify how to select the prototypical distribution $Q_j$
-given a set of training examples $\S$. Let $L_k(x)$ denote a sequence
+given a set of training examples $\trainset$. Let $L_k(x)$ denote a sequence
 of labels from the neighborhood of size $k$ of the example $x$. A
 natural choice is to choose $Q_j$ so that it maximizes the likelihood
 of the examples in the training set. More specifically, we want to
 solve for $Q_j$ such that, for each label $j \in \{1,2,...,m\}$,
 \[
-\mbox{maximize } \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) \mbox{ subject to } \sum_{i} Q_j(i) = 1 
+\mbox{maximize } \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) \mbox{ subject to } \sum_{i} Q_j(i) = 1 
 \]
-where $\S_j = \{ (x,y) \in \S | y = j\}$. We can solve the above program by using Lagrange multipliers,
+where $\trainset_j = \{ (x,y) \in \trainset | y = j\}$. We can solve the above program by using Lagrange multipliers,
 \[
-\nabla_{Q_j(a),\lambda} \left[ \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) + \lambda \sum_{i} Q_j(i) \right] = 0
+\nabla_{Q_j(a),\lambda} \left[ \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) + \lambda \sum_{i} Q_j(i) \right] = 0
 \]
 Let $P_x$ denote the empirical distribution over the labels induced by
 $L_k(x)$. Using Lemma~\ref{lemma:1}, for each $a$,
 \[
-\frac{\partial}{\partial Q_j(a)} \sum_{(x,y) \in \S_j} \log P(L_k(x)|Q_j) + \lambda
-(\sum_{i} Q_j(i)) = \sum_{(x,y) \in \S_j} k \frac{P_x(a)}{Q_j(a)} + \lambda = 0
+\frac{\partial}{\partial Q_j(a)} \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) + \lambda
+(\sum_{i} Q_j(i)) = \sum_{(x,y) \in \trainset_j} k \frac{P_x(a)}{Q_j(a)} + \lambda = 0
 \]
 or
 \[
-Q_j(a) = \frac{k}{\lambda} \sum_{(x,y) \in \S_j} P_x(a)
+Q_j(a) = \frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} P_x(a)
 \]
 Since $\sum_{i} Q_j(i) = 1$, we have
 \begin{align*}
-\sum_{a} \frac{k}{\lambda} \sum_{(x,y) \in \S_j} P_x(a) &= 1\\
-\frac{k}{\lambda} \sum_{a} \sum_{(x,y) \in \S_j} P_x(a) &= 1\\
-\frac{k}{\lambda} \sum_{(x,y) \in \S_j} \sum_{a} P_x(a) &= 1\\
-\frac{k}{\lambda} |\S_j| &= 1\\
-\lambda &= |\S_j|k\\
+\sum_{a} \frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} P_x(a) &= 1\\
+\frac{k}{\lambda} \sum_{a} \sum_{(x,y) \in \trainset_j} P_x(a) &= 1\\
+\frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} \sum_{a} P_x(a) &= 1\\
+\frac{k}{\lambda} |\trainset_j| &= 1\\
+\lambda &= |\trainset_j|k\\
 \end{align*}
 Plugging $\lambda$ back in,
 \[
-Q_j(a) = \frac{\sum_{(x,y) \in \S_y} P_x(a)}{|\S_j|}
+Q_j(a) = \frac{\sum_{(x,y) \in \trainset_y} P_x(a)}{|\trainset_j|}
 \]
 In other words, the likelihood is maximized when $Q_j$ is simply the
 mean of the posterior estimates over examples from class $j$. The
@@ -289,21 +317,21 @@ complete algorithm is given in Algorithm~\ref{alg:minkl}
 \caption{The MinKL $k$-NN algorithm}
 \label{alg:minkl}
 \begin{algorithmic}[1]
-\REQUIRE{A training set $\S$ \\ A sequence of the label in
+\REQUIRE{A training set $\trainset$ \\ A sequence of the label in
   the neighborhood of size $k$ of $x$, $L_k(x)$. \\ A test example
   $\hat{x}$}
 \FOR{$i \in \{1,2,...,m\}$}
 \STATE $Q_i \leftarrow [0]^m$
 \ENDFOR
-\FOR{Each example $(x,y) \in \S$}
-\STATE $P_x \leftarrow $ the empirical distribution induced by $L_k(x)$.
+\FOR{Each example $(x,y) \in \trainset$}
+\STATE {$P_x \leftarrow $ the empirical distribution induced by $L_k(x)$.}
 \STATE $Q_y \leftarrow Q_y + P_x$
 \ENDFOR
 \FOR{$i \in \{1,2,...,m\}$}
-\STATE $Q_i \leftarrow Q_i / |\S_i|$
+\STATE $Q_i \leftarrow Q_i / |\trainset_i|$
 \ENDFOR
-\STATE $P_{\hat{x}} \leftarrow $ the empirical distribution induced by $L_k(\hat{x})$.
-\STATE $prediction = \arg\min_i \dkl(P_\hat{x} || Q_i)$
+% \STATE {$P_{\hat{x}} \leftarrow $ the empirical distribution induced by $L_k(\hat{x})$.}
+%\STATE $prediction = \arg\min_i \dkl(P_\hat{x} || Q_i)$
 \end{algorithmic}
 \end{algorithm}
 
@@ -416,6 +444,10 @@ them~\cite{}.
 
 We performed the analysis for each user. The 5-fold cross validation
 results are shown in Figure~\ref{}.
+
+We also show some of the examples that are misclassified by the
+Majority but not the MinKL in Firgure~\ref{}.
+
 
 \section{Discussion}
 
