@@ -10,6 +10,7 @@
 % use Times
 \usepackage{times}
 % For figures
+\usepackage{xcolor}
 \usepackage{graphicx} % more modern
 %\usepackage{epsfig} % less modern
 \usepackage{subfigure} 
@@ -116,246 +117,226 @@ completely ignores the information from the minority classes which, in
 some cases, can contain crucial information.
 
 To motivate our approach, consider the following example. Suppose
-there are 3 classes and the examples of each class is generated
-according to a normal distribution depicted by
+there are 3 classes of examples where each class is generated
+according to each of the one-dimensional normal distributions depicted in
 Figure~\ref{fig:toy_example}. Even though the example $x$ in
 Figure~\ref{fig:toy_example} is of class A but it is likely that the
-majority of class lables in the neighbor of $x$ is class B. In such
-case, the majority rule will predict class B. However, if we consider the rest
-of the examples in the neighborhood of $x$ and we rarely observe
-examples from class C, then a better prediction would have been class A.
+majority of class labels in the neighborhood of $x$ is class B. In
+such case, the majority rule will predict class B. However, if we
+consider the rest of the examples in the neighborhood of $x$ and we
+rarely observe examples from class C, then a better prediction would
+have been class A.
 
 \begin{figure}[ht]
 \vskip 0.2in
 \begin{center}
-\centerline{\includegraphics[width=\columnwidth]{icml_numpapers}}
-\caption{Toy example}
+\centerline{\includegraphics[width=\columnwidth]{figures/toy_example.eps}}
+\caption{A toy example showing that the majarity rule (ignoring class
+  C entirely) can be sub-optimal. The rare occurences of examples from
+  class C in the neighborhood of $x$ provides useful information
+  regarding the true label of $x$.}
 \label{fig:toy_example}
 \end{center}
 \vskip -0.2in
 \end{figure} 
 
-Our approach can be related to work on learning
-label embeddings.~ \cite{Singh-Miller and Collins}, \cite{Dietterich
-  Bakiri}, \cite{Allwien, Schapire, Singer}, \cite{Samy Bengio}. The
-main difference is that our approach is far more simple , does not
-require convex optimization and seemlessly integrated into the $k$-NN
-framework. Another related work is \cite{Bilmes} which introduces a
-bias term to the likelihood ratio testing that is justified by the
-different between the estimated and the true class conditional
-probability. 
+Our approach is related to work on learning label embeddings~
+\cite{Collins2009, Dietterich, Allwien-Schapire, Singer,
+  Bengio2010}. The main difference is that our approach is far
+simpler, does not require any convex optimizations and can be
+seemlessly integrated into the $k$-NN framework. Another related work
+is \cite{Bilmes} which introduces a bias term to the likelihood ratio
+testing which is justified by the difference between the estimated and
+the true class conditional probability.
 
-This paper is organized as follows. In Section~\ref{}, we describe our
-approach as well as the analysis of how we justify our algorithm. In
-Section~\ref{}, we present experiments comparing our approach with the
-traditional $k$-NN algorithm using both synthetic data and real-world
-data. Then, we discuss the results in Section~\ref{} and conclude the
-paper in Section~\ref{}.
+This paper is organized as follows. In Section~\ref{sec:background},
+we describe the framework and the notations. In
+Section~\ref{sec:min_kl}, we describe our approach and
+justification. In Section~\ref{sec:results}, we present experiments
+comparing our approach with the traditional $k$-NN algorithm using
+both synthetic data and real-world data. Then, we discuss the results
+in Section~\ref{sec:discussion} and conclude the paper in
+Section~\ref{sec:conclusion}.
 
-\section{MinKL Approach}
+\section{Background}
+\label{sec:background}
 
 \newcommand{\X}{\mathcal{X}}
 \newcommand{\Y}{\mathcal{Y}}
-\newcommand{\D}{\mathcal{D}}
 \newcommand{\trainset}{\mathcal{S}}
-\newcommand{\nh}{\mathcal{N}}
 
-Let $\trainset = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of training
-examples where each instance $x_i$ belongs to a domain $\X$ with a
-metric $d(\cdot,\cdot)$. Without loss of generality, we assume that
-each label $y_i$ takes on a value from $\{1,2,\ldots,m\}$. 
+Let $\trainset = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of
+training examples where each instance $x_i$ comes from an example
+space $\X$ of which the distance measure is given by
+$d(\cdot,\cdot)$. Without loss of generality, we assume that each
+label $y_i$ takes on a value from $\Y = \{1,2,\ldots,m\}$.
+
+\newcommand{\nh}{\mathcal{N}}
+\newcommand{\Pemp}{\widehat{\mathbf{P}}^x}
+\newcommand{\Ptrue}{\mathbf{P}^x}
 
 Let $\nh_k(x)$ denote the neighborhood of size $k$ of an example $x
-\in \X$ with respect to the metric $d$. The traditional $k$-NN
-algorithm predicts the label of an example $x$ with the majority of
-the labels in $nh_k(x)$. Suppose the true class label $y$ of an
-example $(x,y)$ is drawn from a fixed but unknown distribution $p$
-whose support is the set of all possible labels. Using the $k$-NN
-algorithm, we can estimate $p$ with an empirical distribution $P$
-defined by
+\in \X$ with respect to the distance measure $d$. The traditional
+$k$-NN rule predicts the label of an example $x$ with the majority of
+the labels in $\nh_k(x)$. More formally, given $x$ and $\nh_k(x)$, we
+can define an empirical distribution $\Pemp$ such that, for each $i \in \Y$, 
 \[
-P(y|x) = \frac{\#\{ \mbox{occurrences of label } y \mbox{ in } \nh_k(x)\}}{k}
-\].  It is easy to see that the majority vote rule is equivalent to
-the predicting with the maximum likelihood estimate of the true label
-assuming the posterior distribution is given by
-$P(y|x)$. Specifically, the predicted label $\hat{y}$ is given by
+\Pemp(i) = \frac{\#\{ \mbox{occurrences of label } i \mbox{ in } \nh_k(x)\}}{k}
+\]
+The $k$-NN rule predicts the label $\hat{y}$ such that
 \[
-\hat{y} = \arg\max_y P(y|x)
+\hat{y} = \arg\max_{i \in \Y} \: \Pemp(i)
 \]
 
-When $n$ is finite, the majority rule can be sub-optimal because the
-prediction is made based entirely on the maximum value of the
-empirical distribution $P$, which is potentially different from the
-true distribution $p$. Sometimes, the class information can be
-contained in the non-maximum values of $P$. For example, suppose we
-are told that the examples from class A never appears in the
-neighborhood of examples from class B and examples from class B and
-class C are often confusable. Given a test example $x$, we estimate
-$P(B | x) = 0.45$ and $P(C | x) = 0.4$. However, we observe a number
-of examples from class A in the neightborhood of $x$. The majority
-rule will predict class B disregarding the additional information that
-we have and could lead to an incorrect prediction.
+For any example $x \in \X$, we can consider the true class
+distribution of $x$, $\Ptrue$ which is given by, for each $i \in \Y$,
+\[
+\Ptrue(i) = \Pr(Y=i | X=x)
+\]
+Under certain assumptions, it is shown in \cite{Fix1951} that,
+for every class label $i \in \Y$, 
+\[
+\lim_{\substack{n \to \infty\\k \to \infty\\k/n \to 0}} \Pemp(i) = \Ptrue(i)
+\]
+Therefore, the majority rule is asymptotically optimal. However, in
+the finite sample case, it can be sub-optimal due to the discrepancy
+between the empirical distribution $\Pemp$ and the true distribution
+$\Ptrue$ as demonstrated by a toy example in Figure~\ref{}
+
+\section{Minimizing KL-Divergence Approach}
 
 \newcommand{\dkl}{D_{\mathrm{KL}}}
+\newcommand{\Qemp}{\widehat{\mathbf{Q}}^j}
+\newcommand{\Qtrue}{\mathbf{Q}^j}
 
-To address this problem, we propose a modification to the $k$-NN
-algorithm so that it takes into account the entire distribution of $P$
-instead of just the maximum coordinate of $P$. We achieve this by
-constructing a prototypical distribution for each class. 
-
+%%%%%%%%%%%
+\iffalse
 \[
-Q_i = \int P(y=i|X=x)P(x=X) \vec{P}(y|x=x)
+\Qtrue(i) = \mathbb{E}_{(x,j) \in \trainset} [ \Ptrue(i) ]
+\]
+\fi
+%%%%%%%%%%%
+
+We propose a modification to the $k$-NN rule such that the entire
+class distribution $\Pemp$ is taken into account instead of just the
+mode of $\Pemp$. Given a training set $\trainset$, we define,
+for each class $j$, a prototypical distribution $\Qemp$ such that
+\[
+\Qemp(i) = \frac{\sum_{(x,j) \in \trainset_j} \Pemp(i)}{|\trainset_j|}
+\]
+where $\trainset_j = \{ (x,y) \in S | y = j \}$. Essentially, the
+prototypical distribution $\Qemp$ is the average class distribution
+among the examples from class $j$. It describes how likely is an
+example from class $j$ get confused with other classes.
+
+To classify a new example $x$, the empirical class distribution $\Pemp$ is
+compared to each prototypical distribution $\Qemp$ for $j \in \Y$ with
+respect to a distance measure $g(\cdot ; \cdot)$ and the class label that
+minimizes the distance is then predicted. More formally, the predicted
+label $\hat{y}$ of an example $x$ is given by
+\[
+\hat{y} = \arg\min_{j \in \Y} \: g(\Pemp ; \Qemp)
 \]
 
-Let $Q_j$
-denote the prototypical distribution for class $j$. We can think of
-$Q_j$ as a distribution that describes the probability that an example
-from class $j$ get confused with other classes. Then, the prediction
-is made by minimizing the the distance from $P$ to each of the
-prototypical distribution of each class. A simple measure of
-difference between any two distributions can be given by the KL
-divergence, which is defined as,
+A natural choice for the function $g$ is the KL-divergence function,
+which is commonly used for measuring a distance between two
+distributions. The KL-divergence $\dkl$ between two distributions
+$\mathbf{P}$ and $\mathbf{Q}$ is defined as
 \[
-\dkl(p || q) = \sum_i p_i \log(\frac{p_i}{q_i})
-\]. 
+\dkl(\mathbf{P} || \mathbf{Q}) = \sum_i \mathbf{P}(i) \log \frac{\mathbf{P}(i)}{\mathbf{Q}(i)}
+\]
 
-Under certain assumptions, we can show that the class label predicted
-by minimizing the KL divergence is the same as the maximum likelihood
-estimate (MLE). For any example $(x,y)$, suppose that the class label $y$ is
-generated by the following two-step process. First, $j$ is drawn
-uniformly from the set $\{1,2,...,m\}$. Then, the class label $y$ is
-then drawn from a fixed but unknown distribution $Q_j$. Let $y^k =
-[y_1, \ldots, y_k]$ denote a sample of size $k$ drawn IID from an
-unknown distribution whose support is the set of all possible
-labels. Let $P_{y^k}$ denote a distribution 
-induced by the sample $y^k$. Specifically,
+We show that, when the true class distribution $\Ptrue$ for each
+example $x$ of class $j$ in the training set $\trainset$ is identical
+to $\Qemp$, the KL-divergence is an optimal measure. The proof is
+given by Lemma~\ref{lemma:dkl} and Collorary~\ref{col:min_dkl}. 
+
+\newcommand{\sampleYK}{y^k}
+\newcommand{\sampleEmpDist}{\mathbf{P}_{y^k}}
+\newcommand{\Q}{\mathbf{Q}}
+
+Let $\sampleYK = [y_1, \ldots, y_k]$ denote a sample of size $k$ drawn IID
+from a fixed distribution over $Y$ and let $\sampleEmpDist$ denote the
+empirical distribution induced by the sample
+$\sampleYK$. Specifically,
 \[
-P_{y^k}(a) = \frac{\#\{ \mbox{occurrences of } a \mbox{ in } y^k\}}{k}
+\sampleEmpDist(i) = \frac{\#\{ \mbox{occurrences of } i \mbox{ in } y^k\}}{k}
 \]
 
 \begin{lemma}
-\label{lemma:1}
-For any distribution $Q$ and for any sample $y^k$ (not neccessarily
-from $Q$), the likelihood of $y^k$ drawn from $Q$ is given by
+\label{lemma:dkl}
+For any distribution $\Q$ and for any sample $\sampleYK$ (not neccessarily
+drawn from $\Q$), the likelihood of $\sampleYK$ drawn from $\Q$ is given by
 \[
-P(y^k|Q) = 2^{-k(H(P_{y^k}) + \dkl(P_{y^k} || Q))}
+\Q(y^k) = 2^{-k(H(\sampleEmpDist) + \dkl\sampleEmpDist || \Q))}
 \]
 \end{lemma}
 \begin{proof}
   \begin{align*}
-    P(y^k|Q) 
-&= \prod_{i=1}^k Q(x_i)\\ 
-&= \prod_{a \in \Y} Q(a)^{nP_{y^k}(a)}\\ 
-&= \prod_{a \in \Y} 2^{nP_{y^k}(a) \log Q(a)}\\ 
-&= \prod_{a \in \Y} 2^{n(P_{y^k}(a) \log Q(a) - P_{y^k}(a) \log P_{y^k}(a) + P_{y^k}(a) \log P_{y^k}(a))}\\ 
-&= 2^{k \sum_{a \in \Y} (-P_{y^k}(a) \log \frac{P_{y^k}(a)}{Q(a)} + P_{y^k}(a) \log P_{y^k}(a) )}\\ 
-&= 2^{k(-\dkl(P_{y^k}||Q) - H(P_{y^k}))}\\
+    \Q(y^k) 
+&= \prod_{l=1}^k \Q(y_l)\\ 
+&= \prod_{j \in \Y} Q(j)^{n\sampleEmpDist(j)}\\ 
+&= \prod_{j \in \Y} 2^{n\sampleEmpDist(j) \log \Q(j)}\\ 
+&= \prod_{j \in \Y} 2^{n(\sampleEmpDist(j) \log \Q(j) - \sampleEmpDist(j) \log \sampleEmpDist(j) + \sampleEmpDist(j) \log \sampleEmpDist(j))}\\ 
+&= 2^{k \sum_{j \in \Y} (-\sampleEmpDist(j) \log \frac{\sampleEmpDist(j)}{\Q(j)} + \sampleEmpDist(j) \log \sampleEmpDist(j))}\\ 
+&= 2^{k(-\dkl(\sampleEmpDist||\Q) - H(\sampleEmpDist))}\\
   \end{align*}
 \end{proof}
 
 \begin{collorary}
 \label{col:min_dkl}
-Given a set of distributions $\mathcal{Q} = \{Q_1, Q_2, \ldots,
-Q_{M}\}$. For any sample $y^k$ drawn from any distribution, $Q_{i^*}
-\in \mathcal{Q}$ maximizes the likelihood of $y^k$ among all other
-distributions in $\mathcal{Q}$ if and only if $Q_{i^*}$ minimizes the
-KL-divergence from $P_{y^k}$.
+Given a set of distributions $\mathcal{Q} = \{\Q_1,\Q_2, \ldots,
+\Q_{m}\}$ and a sample $\sampleYK$ drawn from any distribution, the
+likelihood of $\sampleYK$ is maximized under $\Q_{i^*}$ if and only if
+the KL-divergence from $\sampleEmpDist$ to $\Q_{i^*}$ is minimized.
 \[
- i^* = \arg\max_i \log P(y^k|Q_i) = \arg\min_i \dkl(P_{y^k}||Q_i)
+ i^* = \arg\max_{i \in \Y} \log \Q_i(y^k) = \arg\min_{i \in \Y} \dkl(\sampleEmpDist||\Q_i)
 \]
 \end{collorary}
 \begin{proof}
   Applying Lemma~\ref{lemma:1}, we have
   \begin{align*}
-    P(y^k|Q_i) &= 2^{-n(H(P_{y^k}) + \dkl(P_{y^k} || Q_i))}\\
-    \log P(y^k|Q_i) &= -n(H(P_{y^k}) + \dkl(P_{y^k} || Q_i))\\
-    \arg\max_i \log P(y^k|Q_i) &= \arg\max_i - n\dkl(P_{y^k} || Q_i))\\ 
-    &= \arg\min_i \dkl(P_{y^k} || Q_i))\\
+    \Q_i(y^k) &= 2^{-n(H(\sampleEmpDist) + \dkl\sampleEmpDist || \Q_i))}\\
+    \log \Q_(y^k) &= -n(H(\sampleEmpDist) + \dkl(\sampleEmpDist || \Q_i))\\
+    \arg\max_{i \in \Y} \log \Q(y^k) &= \arg\max_{i \in \Y} - n\dkl(\sampleEmpDist || \Q_i))\\ 
+    &= \arg\min_{i \in \Y} \dkl(\sampleEmpDist || \Q_i))\\
   \end{align*}
 \end{proof}
 
-Next, we justify how to select the prototypical distribution $Q_j$
-given a set of training examples $\trainset$. Let $L_k(x)$ denote a sequence
-of labels from the neighborhood of size $k$ of the example $x$. A
-natural choice is to choose $Q_j$ so that it maximizes the likelihood
-of the examples in the training set. More specifically, we want to
-solve for $Q_j$ such that, for each label $j \in \{1,2,...,m\}$,
+As a result, we expect our approach to perform well when 
 \[
-\mbox{maximize } \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) \mbox{ subject to } \sum_{i} Q_j(i) = 1 
+\frac{\sum_{(x,y) \in \trainset_j} \dkl(\Pemp || \Qemp)}{|\trainset_j|}  \le \epsilon
 \]
-where $\trainset_j = \{ (x,y) \in \trainset | y = j\}$. We can solve the above program by using Lagrange multipliers,
-\[
-\nabla_{Q_j(a),\lambda} \left[ \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) + \lambda \sum_{i} Q_j(i) \right] = 0
-\]
-Let $P_x$ denote the empirical distribution over the labels induced by
-$L_k(x)$. Using Lemma~\ref{lemma:1}, for each $a$,
-\[
-\frac{\partial}{\partial Q_j(a)} \sum_{(x,y) \in \trainset_j} \log P(L_k(x)|Q_j) + \lambda
-(\sum_{i} Q_j(i)) = \sum_{(x,y) \in \trainset_j} k \frac{P_x(a)}{Q_j(a)} + \lambda = 0
-\]
-or
-\[
-Q_j(a) = \frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} P_x(a)
-\]
-Since $\sum_{i} Q_j(i) = 1$, we have
-\begin{align*}
-\sum_{a} \frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} P_x(a) &= 1\\
-\frac{k}{\lambda} \sum_{a} \sum_{(x,y) \in \trainset_j} P_x(a) &= 1\\
-\frac{k}{\lambda} \sum_{(x,y) \in \trainset_j} \sum_{a} P_x(a) &= 1\\
-\frac{k}{\lambda} |\trainset_j| &= 1\\
-\lambda &= |\trainset_j|k\\
-\end{align*}
-Plugging $\lambda$ back in,
-\[
-Q_j(a) = \frac{\sum_{(x,y) \in \trainset_y} P_x(a)}{|\trainset_j|}
-\]
-In other words, the likelihood is maximized when $Q_j$ is simply the
-mean of the posterior estimates over examples from class $j$. The
-complete algorithm is given in Algorithm~\ref{alg:minkl}
+where $\epsilon$ is small and we expect it to perform optimally when
+$\epsilon = 0$. Note that when $\Qemp$ is concentrated exclusively on
+class $j$, our approach actually reduces to the majority rule. A
+summary of our algorithm is given in Algorithm~\ref{alg:minkl}.
 
 \begin{algorithm}
-\caption{The MinKL $k$-NN algorithm}
+\caption{The MinKL $k$-NN rule}
 \label{alg:minkl}
 \begin{algorithmic}[1]
-\REQUIRE{A training set $\trainset$ \\ A sequence of the label in
-  the neighborhood of size $k$ of $x$, $L_k(x)$. \\ A test example
-  $\hat{x}$}
-\FOR{$i \in \{1,2,...,m\}$}
-\STATE $Q_i \leftarrow [0]^m$
+\REQUIRE{A training set $\trainset$ \\ A test example $\tilde{x}$ and its
+  neightborhood $\nh_k(\tilde{x})$}
+\OUTPUT{Predicted label $\hat{y}$}
+\STATE $\widehat{\Q}_i \leftarrow \vec{0} \mbox{ for } i \in \Y$
+\FOR{Each example $(x,j) \in \trainset$}
+\STATE $\widehat{\Q}_j \leftarrow \widehat{\Q}_j + \Pemp$
 \ENDFOR
-\FOR{Each example $(x,y) \in \trainset$}
-\STATE {$P_x \leftarrow $ the empirical distribution induced by $L_k(x)$.}
-\STATE $Q_y \leftarrow Q_y + P_x$
-\ENDFOR
-\FOR{$i \in \{1,2,...,m\}$}
-\STATE $Q_i \leftarrow Q_i / |\trainset_i|$
-\ENDFOR
-% \STATE {$P_{\hat{x}} \leftarrow $ the empirical distribution induced by $L_k(\hat{x})$.}
-%\STATE $prediction = \arg\min_i \dkl(P_\hat{x} || Q_i)$
+\STATE $\widehat{\Q}_i \leftarrow \widehat{\Q}_i / |\trainset_i| \mbox{ for } i \in \Y$
+\STATE $\hat{y} = \arg\min_{i \in \Y} \dkl(\widehat{\mathbf{P}}^{\tilde{x}} || \Q_i)$
 \end{algorithmic}
 \end{algorithm}
-
-Another potential choice of $Q_j$ is 
-\[
-Q_j(i) = \delta_j(i)
-\]
-where $\delta_j(i) = \begin{cases} 1 &\mbox{ if } j = i\\ 0 &\mbox{ otherwise} \end{cases}$.
-By using this $Q_j$, for any distribution $P$, the minimizing
-KL-divergence decision rule reduces to the majority decision rule.
-\begin{align*}
-\arg\min_i \dkl(P||Q_i) &= \arg\min_i -\sum_{j} P(j) \log Q_i(j)\\
- &= \arg\max_i P(i)\\
-\end{align*}
 
 \section{Experiments}
 
 In this section, we describe experiments we have performed with both
 synthetic data and real-world data. Our primary goal is to compare the
-classification errors our proposed algorithm (MinKL) with thos of the
-traditional $k$-NN algorithm (Majority) under various conditions. 
-As for the real-world data, we performed our experiments on two
-digit classification datasets: MNIST, SVHN and an online character
-recognition dataset: uRight.
+classification errors of our proposed algorithm (MinKL) with those of
+the traditional $k$-NN rule (Majority) under various conditions.  As
+for the real-world data, we performed our experiments on an online
+character recognition dataset: uRight and two image-classification
+datasets: MNIST, SVHN.
 
 \begin{table}[t]
 \caption{A summary of the datasets}
@@ -367,15 +348,15 @@ recognition dataset: uRight.
 \begin{tabular}{lcccr}
 \hline
 \abovespace\belowspace
-Dataset & No. of classes & validation \\
+Dataset & No. of classes & validation && epsilon\\
 \hline
 \abovespace
-Synthetic-1   & 10 & 5-fold \\
-Synthetic-2 & 81 & 5-fold\\
+Synthetic-1   & 10 & 5-fold && \\
+Synthetic-2 & 81 & 5-fold && \\
 \belowspace
-MNIST & 10 & test set provided\\
-SVHN & 10 & test set provided\\
-uRight & 26 & 5-fold\\
+MNIST & 10 & test set provided && \\
+SVHN & 10 & test set provided && \\
+uRight & 26 & 5-fold && \\
 \hline
 \end{tabular}
 \end{sc}
@@ -394,7 +375,7 @@ shows a 2-d representation of each class where $b=5, d= 2$ and $\sigma
 = 0.5$. We use Manhattan distance as the similarity measure for the
 $k$-NN algorithm.
 
-In the first experiment, we generate a dataset, called Synthetic-1,
+In the first experiment, we generate a dataset, called \textbf{SYN-1},
 using $b=10, d=1$ and $\sigma=1.5$. There is a total of 10 classes in
 Synthetic-1. In Figure~\ref{} , we show the 5-fold cross validation
 error rate of MinKL and Majority using different $n$ and $k$. Using
@@ -409,6 +390,22 @@ classes. Again, in Figure~\ref{}, we show the 5-fold cross validation
 error rate of MinKL and Majority using different $n$ and $k$ and
 compare the error rate of MinKL, Majority and Bayes optimal at
 different $n$ while $k$ is optimized.
+
+
+\subsection{uRight}
+The uRight dataset is our dataset of handwriting trajectories of
+English characters. Each example is a sequence of $(x,y)$-coordinates
+representing an English letter. We collected this data from 20
+different users writing on a touch screen of a mobile phone. There is
+a total of about 10000 examples. The similarity between any two
+examples is measured by the dynamic time wraping distance between
+them~\cite{}.
+
+We performed the analysis for each user. The 5-fold cross validation
+results are shown in Figure~\ref{}.
+
+We also show some of the examples that are misclassified by the
+Majority but not the MinKL in Firgure~\ref{}.
 
 
 \subsection{MNIST}
@@ -433,20 +430,6 @@ similarity measure of the $k$-NN algorithm.
 
 The results are summarized in Figure~\ref{}.
 
-\subsection{uRight}
-The uRight dataset is our dataset of handwriting trajectories of
-English characters. Each example is a sequence of $(x,y)$-coordinates
-representing an English letter. We collected this data from 20
-different users writing on a touch screen of a mobile phone. There is
-a total of about 10000 examples. The similarity between any two
-examples is measured by the dynamic time wraping distance between
-them~\cite{}.
-
-We performed the analysis for each user. The 5-fold cross validation
-results are shown in Figure~\ref{}.
-
-We also show some of the examples that are misclassified by the
-Majority but not the MinKL in Firgure~\ref{}.
 
 
 \section{Discussion}
