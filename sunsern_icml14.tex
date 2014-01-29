@@ -131,21 +131,22 @@ have been class A.
 \vskip 0.2in
 \begin{center}
 \centerline{\includegraphics[width=\columnwidth]{figures/toy_example.eps}}
-\caption{A toy example showing that the majarity rule (ignoring class
-  C entirely) can be sub-optimal. The rare occurences of examples from
-  class C in the neighborhood of $x$ provides useful information
-  regarding the true label of $x$.}
+\caption{A toy example showing that the majarity rule (ignoring
+  information about class C in the neighborhood) can be
+  sub-optimal. Based on the majority rule, the example $x$ of class A
+  can be misclassified as class B. However, the rare occurences of
+  examples of class C in the neighborhood of $x$ can provide
+  useful information regarding the true label of $x$.}
 \label{fig:toy_example}
 \end{center}
 \vskip -0.2in
 \end{figure} 
 
 Our approach is related to work on learning label embeddings~
-\cite{Collins2009, Dietterich, Allwien-Schapire, Singer,
-  Bengio2010}. The main difference is that our approach is far
+\cite{Collins2009, Bengio2010}. The main difference is that our approach is far
 simpler, does not require any convex optimizations and can be
 seemlessly integrated into the $k$-NN framework. Another related work
-is \cite{Bilmes} which introduces a bias term to the likelihood ratio
+is \cite{Bilmes2001} which introduces a bias term to the likelihood ratio
 testing which is justified by the difference between the estimated and
 the true class conditional probability.
 
@@ -212,43 +213,43 @@ $\Ptrue$ as demonstrated by a toy example in Figure~\ref{}
 %%%%%%%%%%%
 \iffalse
 \[
-\Qtrue(i) = \mathbb{E}_{(x,j) \in \trainset} [ \Ptrue(i) ]
+\Qtrue(i) = \frac{\sum_{(x,j) \in \trainset_j} \Ptrue(i)}{|\trainset_j|}
 \]
 \fi
 %%%%%%%%%%%
 
-We propose a modification to the $k$-NN rule such that the entire
-class distribution $\Pemp$ is taken into account instead of just the
-mode of $\Pemp$. Given a training set $\trainset$, we define,
-for each class $j$, a prototypical distribution $\Qemp$ such that
+We propose a modification to the $k$-NN rule that predicts the class
+label based on the entire class distribution $\Pemp$ instead of just the
+mode of $\Pemp$. Given a training set $\trainset$, we define, for each
+class $j$, a prototypical distribution $\Qemp$ such that
 \[
 \Qemp(i) = \frac{\sum_{(x,j) \in \trainset_j} \Pemp(i)}{|\trainset_j|}
 \]
-where $\trainset_j = \{ (x,y) \in S | y = j \}$. Essentially, the
-prototypical distribution $\Qemp$ is the average class distribution
-among the examples from class $j$. It describes how likely is an
-example from class $j$ get confused with other classes.
+where $\trainset_j = \{ (x,y) \in S | y = j \}$. Essentially, the prototypical
+distribution $\Qemp$ is the average class distribution among the
+examples of class $j$ in the training set. It describes how likely is
+an example from class $j$ get confused with other classes.
 
-To classify a new example $x$, the empirical class distribution $\Pemp$ is
-compared to each prototypical distribution $\Qemp$ for $j \in \Y$ with
-respect to a distance measure $g(\cdot ; \cdot)$ and the class label that
-minimizes the distance is then predicted. More formally, the predicted
-label $\hat{y}$ of an example $x$ is given by
+To classify a new example $x$, the empirical class distribution
+$\Pemp$ is compared to each prototypical distribution $\Qemp$ for $j
+\in \Y$ with respect to some distance measure $g(\cdot ; \cdot)$ and
+the class label that minimizes the distance is then predicted. More
+formally, the predicted label $\hat{y}$ of an example $x$ is given by
 \[
 \hat{y} = \arg\min_{j \in \Y} \: g(\Pemp ; \Qemp)
 \]
 
-A natural choice for the function $g$ is the KL-divergence function,
-which is commonly used for measuring a distance between two
-distributions. The KL-divergence $\dkl$ between two distributions
-$\mathbf{P}$ and $\mathbf{Q}$ is defined as
+Next, we discuss the choice of the function $g$. A natural choice for
+$g$ is the KL-divergence function which is commonly used for measuring
+similarity between two distributions. The KL-divergence $\dkl$ between
+two distributions $\mathbf{P}$ and $\mathbf{Q}$ is defined as
 \[
 \dkl(\mathbf{P} || \mathbf{Q}) = \sum_i \mathbf{P}(i) \log \frac{\mathbf{P}(i)}{\mathbf{Q}(i)}
 \]
 
 We show that, when the true class distribution $\Ptrue$ for each
 example $x$ of class $j$ in the training set $\trainset$ is identical
-to $\Qemp$, the KL-divergence is an optimal measure. The proof is
+to $\Qemp$, the KL-divergence is optimal. The proof is
 given by Lemma~\ref{lemma:dkl} and Collorary~\ref{col:min_dkl}. 
 
 \newcommand{\sampleYK}{y^k}
@@ -294,7 +295,7 @@ the KL-divergence from $\sampleEmpDist$ to $\Q_{i^*}$ is minimized.
 \]
 \end{collorary}
 \begin{proof}
-  Applying Lemma~\ref{lemma:1}, we have
+  Applying Lemma~\ref{lemma:dkl}, we have
   \begin{align*}
     \Q_i(y^k) &= 2^{-n(H(\sampleEmpDist) + \dkl\sampleEmpDist || \Q_i))}\\
     \log \Q_(y^k) &= -n(H(\sampleEmpDist) + \dkl(\sampleEmpDist || \Q_i))\\
@@ -303,14 +304,31 @@ the KL-divergence from $\sampleEmpDist$ to $\Q_{i^*}$ is minimized.
   \end{align*}
 \end{proof}
 
-As a result, we expect our approach to perform well when 
+We have justified the KL-divergence in the ideal situation where the
+class distribution $\Ptrue$ can be modelled perfectly by the
+prototypical distribution $\Qemp$. This is a very strong assumption
+and not likely to hold in practice. However, we can estimate how well
+$\Qemp$ can model the data in $\trainset$ using the following
+function.
 \[
-\frac{\sum_{(x,y) \in \trainset_j} \dkl(\Pemp || \Qemp)}{|\trainset_j|}  \le \epsilon
+\phi(\trainset) = \frac{\sum_{(x,y) \in \trainset_j} \dkl(\Pemp ||
+  \Qemp)}{|\trainset_j| \log m} 
 \]
-where $\epsilon$ is small and we expect it to perform optimally when
-$\epsilon = 0$. Note that when $\Qemp$ is concentrated exclusively on
-class $j$, our approach actually reduces to the majority rule. A
-summary of our algorithm is given in Algorithm~\ref{alg:minkl}.
+We expect our approach to perform well when $\phi(\trainset)$ is
+small. 
+
+A summary of our algorithm is given in Algorithm~\ref{alg:minkl}.
+It is worth noting that our algorithm will reduce to the majority
+rule when the prototypical distribution
+$\Qemp$ is defined as 
+\[
+\Qemp(i) = \begin{cases} 1-\epsilon &\mbox{if } i = j \\ 
+\epsilon & \mbox{otherwise} \end{cases}
+\]
+where $\epsilon$ is a small constant. In this case, the non-majority
+examples do not contribution any information to the final
+prediction. Hence, the prediction will be made based solely on the
+majority.
 
 \begin{algorithm}
 \caption{The MinKL $k$-NN rule}
@@ -334,130 +352,223 @@ In this section, we describe experiments we have performed with both
 synthetic data and real-world data. Our primary goal is to compare the
 classification errors of our proposed algorithm (MinKL) with those of
 the traditional $k$-NN rule (Majority) under various conditions.  As
-for the real-world data, we performed our experiments on an online
-character recognition dataset: uRight and two image-classification
-datasets: MNIST, SVHN.
+for the real-world data, we performed experiments on 3 different
+datasets: uRight, MNIST, SVHN.  A summary of the datasets is given in
+Table~\ref{table:results}.
 
-\begin{table}[t]
-\caption{A summary of the datasets}
-\label{table:datasets}
+\begin{table*}[tb]
+\caption{A summary of the datasets used in our experiments}
+\label{table:results}
 \vskip 0.15in
 \begin{center}
 \begin{small}
 \begin{sc}
-\begin{tabular}{lcccr}
-\hline
-\abovespace\belowspace
-Dataset & No. of classes & validation && epsilon\\
-\hline
-\abovespace
-Synthetic-1   & 10 & 5-fold && \\
-Synthetic-2 & 81 & 5-fold && \\
-\belowspace
-MNIST & 10 & test set provided && \\
-SVHN & 10 & test set provided && \\
-uRight & 26 & 5-fold && \\
-\hline
+\begin{tabular}{lcccc}
+  \hline
+  \abovespace\belowspace
+  Dataset & No. of classes & No. of training ex. & No. of test
+  ex. & Avg $\phi$ \\
+  \hline
+  \abovespace
+  SYN-1 & 10 & up to 1600 & 10000 & 0.10\\
+  SYN-2 & 64 & up to 6400 & 6400 & 0.25\\
+  \belowspace
+  SYN-3 & 10 & up to 1600 & 10000 & 0.63\\
+  \hline
+  \abovespace
+  uRight & 26 & 9945 & -  & 0.05\\
+  MNIST & 10 & 60000 & 10000 & - \\
+  \belowspace
+  SVHN & 10 & 73257 & 26032 &-\\
+  \hline
 \end{tabular}
 \end{sc}
 \end{small}
 \end{center}
 \vskip -0.1in
-\end{table}
+\end{table*}
 
 \subsection{Synthetic data}
-Our synthetic data can be described as follows. Each instance is a
-point in a taurus-like $d$-dimensional hypercube $[0,b-1]^d$. There is
-a total of $b^d$ classes and the instances of each class are generated
-by a normal distribution with mean located at an integer lattice point
-of the hypercube and a covariance matrix $\sigma I_d$. Figure~\ref{}
-shows a 2-d representation of each class where $b=5, d= 2$ and $\sigma
-= 0.5$. We use Manhattan distance as the similarity measure for the
-$k$-NN algorithm.
+We performed 3 experiments using synthetic data. The synthetic data in
+our experiments can be described as follows. Each instance $x$ is a
+point inside a taurus-like $d$-dimensional hypercube of size $b$
+i.e. $x \in [0,b-1]^d$. There will be a total of $b^d$ classes and the
+distribution of class is uniform. The instances of each class are
+generated by a normal distribution with mean located at an integer
+lattice point of the hypercube and a covariance matrix $\sigma
+\mathbf{I}_d$. The left most column in Figure~\ref{fig:synthetic}
+depicts the generating distributions of each dataset. As for the
+distance measure, we use the Manhattan distance ($L_1$ norm) for
+measuring the distance between examples.
 
-In the first experiment, we generate a dataset, called \textbf{SYN-1},
-using $b=10, d=1$ and $\sigma=1.5$. There is a total of 10 classes in
-Synthetic-1. In Figure~\ref{} , we show the 5-fold cross validation
-error rate of MinKL and Majority using different $n$ and $k$. Using
-the optimal $k$ for each $n$, we compare the error rates of MinKL,
-Majority and the Bayes optimal classifier at different $n$ in
-Figure~\ref{}. 
+In our first experiment, the dataset \textbf{SYN-1} is generated with
+the following parameters: $b=10, d=1$ and $\sigma=1.5$. The data in
+this experiment is designed to mimic the situation described in
+Figure~\ref{fig:toy_example} but with total of 10 classes. In the
+second experiment, the dataset \textbf{SYN-2} is generated with the
+following parameters: $b=4$, $d=3$ and $\sigma=0.4$. \textbf{SYN-2}
+has very similar structure to \textbf{SYN-1} but it is more complex
+with the total of $64$ classes. In our last synthetic data experiment,
+we generated the dataset \textbf{SYN-3}. Similar to \textbf{SYN-1},
+each instance of \textbf{SYN-3} is one-dimensional. However, the
+generating distribution for class $i$ is a mixture of two normal
+distributions centered at $i$ and $i+3$ and the mixing coefficient is
+0.8 and 0.2 respectively. This dataset is designed such that the true
+class distributions $\Ptrue$ of each example cannot be modelled
+perfectly by a single distribution. Therefore, we expect MinKL to
+perform worse than Majority on this dataset.
 
-
-Next, we generate a more complex dataset, called Synthetic-2, using
-$b=3$, $d=4$ and $\sigma=0.4$. This results in a total of $81$ different
-classes. Again, in Figure~\ref{}, we show the 5-fold cross validation
-error rate of MinKL and Majority using different $n$ and $k$ and
-compare the error rate of MinKL, Majority and Bayes optimal at
-different $n$ while $k$ is optimized.
-
+In Figure~\ref{fig:synthetic}, we compare the error rates of MinKL and
+Majority using different $n$ and $k$ for each of the experiments. It
+is important to note that in our synthetic data experiment, we
+intentially focus on the cases where $n$ is relatively small since we
+already know that the error rate of Majority converges to the optimal
+rate as $n$ goes to infinity. The average $\phi$ for \textbf{SYN-1},
+\textbf{SYN-2} and \textbf{SYN-3} are 0.1, 0.25 and 0.63 respectively.
+ 
+\begin{figure*}[tb]
+\vskip 0.2in
+\begin{center}
+\centering
+\subfigure[SYN-1: (left) Data models, (center) error rate vs. $k$
+while $n$ fixed, (right) error rate vs. $n$ while $k$ fixed]{
+  \includegraphics[width=.33\linewidth]{figures/icml-syn1-data.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn1-results-N20.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn1-overall.pdf}
+  \label{fig:synthetic-1}
+}\\
+\subfigure[SYN-2: (left) Data models, (center) error rate vs. $k$
+while $n$ fixed, (right) error rate vs. $n$ while $k$ fixed]{
+  \includegraphics[width=.33\linewidth]{figures/icml-syn2-data.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn2-results-N20.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn3-overall.pdf}
+  \label{fig:synthetic-2}
+}\\
+\subfigure[SYN-3: (left) Data models, (center) error rate vs. $k$
+while $n$ fixed, (right) error rate vs. $n$ while $k$ fixed]{
+  \includegraphics[width=.33\linewidth]{figures/icml-syn3-data.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn3-results-N20.pdf}
+  \includegraphics[width=.33\linewidth]{figures/icml-syn3-overall.pdf}
+  \label{fig:synthetic-3}
+}
+\caption{Results from the synthetic data experiment.}
+\label{fig:synthetic}
+\end{center}
+\vskip -0.2in
+\end{figure*}
 
 \subsection{uRight}
-The uRight dataset is our dataset of handwriting trajectories of
-English characters. Each example is a sequence of $(x,y)$-coordinates
-representing an English letter. We collected this data from 20
-different users writing on a touch screen of a mobile phone. There is
-a total of about 10000 examples. The similarity between any two
-examples is measured by the dynamic time wraping distance between
-them~\cite{}.
+The uRight dataset contains handwriting trajectories of the 26
+lowercase English characters.  We collected the handwriting data from
+20 different users writing isolated lowercase English characters on a
+touch screen of a mobile phone. Each example is a sequence of
+$(x,y,t)$ where $x$ and $y$ are the $(x,y)$-coordinates and $t$ is the
+timestamp of each sampling point. Figure~\ref{fig:uright-examples} shows some
+examples of the handwriting trajectories. There is a total of 9945
+examples and the distribution of the class labels is fairly uniform. The
+similarity between two examples is measured by the dynamic time
+wraping (DTW) distance~\cite{Bahlmann2004}.
 
-We performed the analysis for each user. The 5-fold cross validation
-results are shown in Figure~\ref{}.
+Using $k = 5$, the average error rates of MinKL and Majority for each
+user is shown in Figure~\ref{fig:uright-results}. According to the paired
+t-test, the average error rate of MinKL (3.76\%) is significantly
+smaller than the average error rate of Majority (5.86\%) with $p <
+0.001$. The average $\phi$ for the uRight dataset is
+0.05. Figure~\ref{fig:uright-mistakes} displays some of the examples that are
+misclassified by Majority but not by MinKL.
 
-We also show some of the examples that are misclassified by the
-Majority but not the MinKL in Firgure~\ref{}.
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.3\linewidth]{figures/icml-uright-examples-0.pdf}
+  \includegraphics[width=.3\linewidth]{figures/icml-uright-examples-1.pdf}\\
+  %\includegraphics[width=.3\linewidth]{figures/icml-uright-examples-2.pdf}
+  %\includegraphics[width=.3\linewidth]{figures/icml-uright-examples-3.pdf}
+  \caption{uRight examples}
+  \label{fig:uright-examples}
+\end{center}
+\vskip -0.2in
+\end{figure}
 
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.95\linewidth]{figures/icml-uright-allusers.pdf}
+  \caption{uRight results}
+  \label{fig:uright-results}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.95\linewidth]{figures/icml-uright-interesting-134.pdf}\\
+  \includegraphics[width=.95\linewidth]{figures/icml-uright-interesting-70.pdf}\\
+  \includegraphics[width=.95\linewidth]{figures/icml-uright-interesting-248.pdf}\\
+  \caption{uRight mistakes}
+  \label{fig:uright-mistakes}
+\end{center}
+\vskip -0.2in
+\end{figure}
 
 \subsection{MNIST}
-Each instance in the MNIST dataset~\cite{} is a 28x28 grayscale image. There
-are 60000 training examples and 10000 testing examples. The dataset
-has been widely used as a benchmark for classification algorithms. We
-prepropress the data by deskewing, resampling the images down to
-14x14 pixels, and applying PCA. We transform each image into a feature
-vector which is the top 100 PCA components. We use Euclidean distance
-as the similarity measure for the $k$-NN algorithm.
+The MNIST dataset~\cite{Lecun1998} contains images of digits. Each
+example is a 28x28 grayscale image and there are a total of 60000
+training examples and 10000 test examples in the dataset. We
+prepropress the data by deskewing, downsampling the images. The
+feature vector of each example corresponds to the top 100 PCA
+components of the preprocessed image. The Euclidean distance is used
+as the similarity measure in the neighborhood calculation.
 
-The results are summarized in Figure~\ref{}. 
+The test error rate we obtained from MinKL is .... while the test
+error rate from Majority is ... ($k = 5$). The MNIST dataset has
+$\phi$ equal to .... Figure~\ref{fig:mnist} shows the test error rates
+of the two algorithm obtained at different $k$.
 
 \subsection{SVHN}
-The SVHN dataset~\cite{} contains images of digits taken from the Google
-street view data. It is considered a harder dataset than the
-MNIST. Each instance in the SVHN dataset is a 32x32 RGB image
-patch. There are 73257 training examples and 26032 testing
-examples. We preprocess the images by deskewing and then extract the
-HOG features~\cite{} from the images. We use Manhattan distance as the
-similarity measure of the $k$-NN algorithm.
+The SVHN dataset~\cite{Netzer2011} contains images of digits taken
+from the Google street view data. It is considered a harder dataset
+than MNIST. Each example in SVHN is a 32x32 RGB image patch and there
+are a total of 73257 training examples and 26032 test examples in the
+dataset. For each example, HOG features~\cite{Dalal2005} are computed
+and combined into a feature vector. The Manhattan distance is used as
+the similarity measure in the neighborhood calculation.
 
 The results are summarized in Figure~\ref{}.
 
-
-
 \section{Discussion}
 
-From the experiments, we noticed that MinKL approach performs
-significantly better than Majority in the small sample situation. As
-the number of training examples increases, the gap of the performance
-of the two approaches decreases. We anticipated this since the
-Majority vote rule is proven to be optimal asymptotically. In some
-applications, it is crucial to perform well even when there are only a
-few training examples. This is where we believe that our approach has
-advantage over the majority vote.
+From the \textbf{SYN-1} and \textbf{SYN-2} experiments, we observe
+that MinKL performs significantly better than Majority, especially
+when $n$ is small. As the number of training examples increases, the
+performance gap of the two approaches decreases. This is not
+surprising because the majority vote rule is known to be optimal
+asymptotically. However, in some applications where the number of
+training examples is limited, our approach has advantage over the
+majority rule.
 
-In analysis, we have shown that our approach is optimal when the data
-is generated under certain assumptions. For real-world data,
-such assumptions may or may not hold. Nonetheless, we can see some
-improvements in our experiments. We suspect that our approach will be
-more beneficial to problems with a large number of classes and the
-confusions between classes are non-uniform. 
+As we expected, the MinKL approach performs well when $\phi$ is
+small. This gives us a simple way to check if a problem is suitable
+for MinKL. 
+
+
+We suspect that our approach will be more beneficial to problems with
+a large number of classes and the confusions between classes are
+non-uniform.
+
 
 In a sense, our approach naturally incoporates the infomation from the
 label space into the classification. The label space information is
 encoded into the prototypical neighborhood distribution. The
-performance of our approach depends on how
-different the prototypical neighborhood distributions of different
-classes are. If the prototypical distributions are similar, then our
-approach will suffer. A workaround is to have multiple prototypical
-distributions per class. 
+performance of our approach depends on how different the prototypical
+neighborhood distributions of different classes are. If the
+prototypical distributions are similar to each other, then our
+approach will not perform well. A workaround is to maintain multiple
+prototypical distributions per class.
 
 Our approach does not have a consistency gaurantee. It is
 possible that our approach will be sub-optimal when the number of
@@ -466,32 +577,33 @@ distribution model is incorrect or insufficent. We do not worry
 about this problem that much since we see our approach being used
 in a small sample scenario.
 
-In practice, other divergences might work better than the KL
-divergence. The KL divergence is considered a special case of a
-more general divergence function called Alpha-divergence which is
-given by
+In practice, other divergences might work better than the
+KL-divergence. The KL-divergence is considered a special case of a
+more general divergence function called
+Alpha-divergence~\cite{Cichocki2010}, which is given by
 \[
 D^{(\alpha)}_A (p||q) = \frac{1}{\alpha(\alpha - 1)}\left( \sum_1^n
   p^{\alpha}_i q^{1-\alpha}_i - 1\right), \; \alpha \in \mathrm{R} \ \{0,1\}
 \]
 The KL-divergence can be expressed as $D_{KL} (p || q) = \lim_{\alpha
-\rightarrow 1} D^{(\alpha)}_A (p || q)$. 
-For uRight dataset, we were able to obtain better classification
-accuracy by using Alpha-divergence with $\alpha = 2$.
+  \rightarrow 1} D^{(\alpha)}_A (p || q)$.  For the uRight dataset, we
+were able to obtain even lower error rate by using Alpha-divergence
+with $\alpha = 2$.
 
 Our approach can be applied to other classification algorithms as
-well. The $k$-NN algorithm is very computational expensive when
-classifying a new example. For some applications, it is
-important to be able to classify new examples quickly. A simple
-modification to the $k$-NN algorithm is to keep a small number of
-representatives for each class and discard the rest. This algorithm is
-called the $k$ nearest-centroid algorithm ($k$-NC) where only the
-$k$-centroids are kept as the class representatives. In the $k$-NC,
-the class posterior distribution can be estimating by
+well. The $k$-NN algorithm is very computational expensive in
+classifying a new example. In some applications, it is important to be
+able to classify new examples quickly. A simple modification to the
+$k$-NN algorithm that significanly reduces the classication time is to
+keep only a small number of representatives per class and discard the
+rest of the examples. This algorithm is called the $k$
+nearest-centroid algorithm ($k$-NC) where only the $k$-centroids are
+kept as the class representatives. In the $k$-NC, the class
+distribution $\mathbf{P}_x$ can be estimating by
 \[
-p(y|x) = \frac{e^{d(x,C(y))}}{\sum_j e^{d(x, C(j))} }
+\mathbf{P}_x(j) = \frac{e^{d(x,C(j))}}{\sum_i e^{d(x, C(i))} }
 \]
-We can apply the MinKL technique to the class posterior computed this
+We can apply MinKL to the class posterior computed this
 way. In Figure~\ref{}, we compare the accuracy of the $k$-NC algorithm
 with MinKL and Maximum (equavalent to Majority in the $k$-NN).
 
@@ -499,7 +611,7 @@ with MinKL and Maximum (equavalent to Majority in the $k$-NN).
 
 We suggest a simple modification to the $k$-NN algorithm.
 
-\bibliography{example_paper}
+\bibliography{library}
 \bibliographystyle{icml2014}
 
 \end{document} 
