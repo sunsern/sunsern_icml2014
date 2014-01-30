@@ -93,19 +93,18 @@ multiclass classification problems where the number of classes $m >
 2$. Given a set of training examples, the $k$-NN rule predicts the
 label of a new example with the majority of the class labels among its
 $k$ nearest neighbors. Fix and Hodges~\cite{Fix1951} show that,
-asymptotically, the $k$-NN rule achieves the Bayes error rate by
+asymptotically, the $k$-NN rule achieves the Bayes error rate $r^*$ by
 choosing a large enough $k$ but small compared to the number of
 examples $n$. Nonetheless, when $n$ is small, there is no guarantee of
 how well the $k$-NN algorithm will perform. 
 
 Additionaly, Cover and Hart~\cite{Cover1967} show that, when $k = 1$,
 the aymptotic error rate of the $1$-NN rule is upperbounded by $r^*(2
-- \frac{m}{m-1}r^*)$ where $r^*$ denotes the Bayes error rate. This
-result suggests that at least a half of the class information is
-contained in the nearest neighbor. When the nearest neighbor does not
-have all of the class information, it is possible that the missing
-class information could be extracted from other examples in the
-neighborhood.
+- \frac{m}{m-1}r^*)$. This result suggests that at least a half of the
+class information is contained in the nearest neighbor. When the
+nearest neighbor does not have all of the class information, it is
+possible that the missing class information could be extracted from
+other examples in the neighborhood.
 
 In this paper, we propose a modification to the $k$-NN rule which
 potentially leverages additional information from the non-majority
@@ -168,13 +167,13 @@ Section~\ref{sec:conclusion}.
 
 Let $\trainset = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of
 training examples where each instance $x_i$ comes from an example
-space $\X$ of which the distance measure is given by
+space $\X$ of which the distance between any two examples is measured by
 $d(\cdot,\cdot)$. Without loss of generality, we assume that each
 label $y_i$ takes on a value from $\Y = \{1,2,\ldots,m\}$.
 
 \newcommand{\nh}{\mathcal{N}}
-\newcommand{\Pemp}{\widehat{\mathbf{P}}^x}
-\newcommand{\Ptrue}{\mathbf{P}^x}
+\newcommand{\Pemp}{\widehat{\mathbf{P}}_{(x,n,k)}}
+\newcommand{\Ptrue}{\mathbf{P}_{(x)}}
 
 Let $\nh_k(x)$ denote the neighborhood of size $k$ of an example $x
 \in \X$ with respect to the distance measure $d$. The traditional
@@ -202,50 +201,66 @@ for every class label $i \in \Y$,
 Therefore, the majority rule is asymptotically optimal. However, in
 the finite sample case, it can be sub-optimal due to the discrepancy
 between the empirical distribution $\Pemp$ and the true distribution
-$\Ptrue$ as demonstrated by a toy example in Figure~\ref{}
+$\Ptrue$ as demonstrated by the toy example in
+Figure~\ref{fig:toy_example}.
 
 \section{Minimizing KL-Divergence Approach}
 
 \newcommand{\dkl}{D_{\mathrm{KL}}}
-\newcommand{\Qemp}{\widehat{\mathbf{Q}}^j}
-\newcommand{\Qtrue}{\mathbf{Q}^j}
+\newcommand{\Qemp}{\widehat{\mathbf{Q}}_(j,n,k)}
+\newcommand{\Qtrue}{\mathbf{Q}_(j)}
 
 %%%%%%%%%%%
 \iffalse
-\[
-\Qtrue(i) = \frac{\sum_{(x,j) \in \trainset_j} \Ptrue(i)}{|\trainset_j|}
-\]
 \fi
 %%%%%%%%%%%
 
 We propose a modification to the $k$-NN rule that predicts the class
-label based on the entire class distribution $\Pemp$ instead of just the
-mode of $\Pemp$. Given a training set $\trainset$, we define, for each
-class $j$, a prototypical distribution $\Qemp$ such that
+label based on the entire class distribution $\Pemp$ instead of just
+the mode of $\Pemp$. Given a training set $\trainset$ of size $n$ and
+the neighborhood of size $k$, we define, for each class $j$, an
+empirical center distribution $\Qemp$ as
 \[
 \Qemp(i) = \frac{\sum_{(x,j) \in \trainset_j} \Pemp(i)}{|\trainset_j|}
 \]
-where $\trainset_j = \{ (x,y) \in S | y = j \}$. Essentially, the prototypical
-distribution $\Qemp$ is the average class distribution among the
-examples of class $j$ in the training set. It describes how likely is
-an example from class $j$ get confused with other classes.
-
-To classify a new example $x$, the empirical class distribution
-$\Pemp$ is compared to each prototypical distribution $\Qemp$ for $j
-\in \Y$ with respect to some distance measure $g(\cdot ; \cdot)$ and
-the class label that minimizes the distance is then predicted. More
-formally, the predicted label $\hat{y}$ of an example $x$ is given by
+where $\trainset_j = \{ (x,y) \in S | y = j \}$.  To classify a new
+example $x$, the empirical class distribution $\Pemp$ is compared to
+each of the center distributions $\Qemp$ with respect to some distance
+measure $g(\cdot ; \cdot)$ and the class label that minimizes the
+distance is then predicted. More formally, the predicted label
+$\hat{y}$ is given by
 \[
 \hat{y} = \arg\min_{j \in \Y} \: g(\Pemp ; \Qemp)
 \]
 
-Next, we discuss the choice of the function $g$. A natural choice for
-$g$ is the KL-divergence function which is commonly used for measuring
-similarity between two distributions. The KL-divergence $\dkl$ between
-two distributions $\mathbf{P}$ and $\mathbf{Q}$ is defined as
+Technically, the choice of the function $g$ depends on the data but,
+in this paper, we will give a justification for when $g$ is the
+KL-divergence. The KL-divergence $\dkl$ between two
+distributions $\mathbf{P}$ and $\mathbf{Q}$ is defined by
 \[
 \dkl(\mathbf{P} || \mathbf{Q}) = \sum_i \mathbf{P}(i) \log \frac{\mathbf{P}(i)}{\mathbf{Q}(i)}
 \]
+
+\newcommand{\Pexpected}{\tilde{\mathbf{P}}^{(x,n,k)}}
+
+Next, we will give a justification for our approach for finite $n$ and
+$k$. Let $\Qtrue$ denote the true center distribution for class $j$
+which is given by
+\[
+\Qtrue = \int_x \Ptrue(j) \Ptrue
+\]
+For finite $n$ and $k$, we define the expected class distribution $\Pexpected$ for an example
+$x$ as
+\[
+\Pexpected = \mathbf{E}[\Pemp]
+\]
+
+
+
+
+
+
+
 
 We show that, when the true class distribution $\Ptrue$ for each
 example $x$ of class $j$ in the training set $\trainset$ is identical
@@ -377,7 +392,7 @@ Table~\ref{table:results}.
   \hline
   \abovespace
   uRight & 26 & 9945 & -  & 0.05\\
-  MNIST & 10 & 60000 & 10000 & - \\
+  MNIST & 10 & 60000 & 10000 & 0.05 \\
   \belowspace
   SVHN & 10 & 73257 & 26032 &-\\
   \hline
@@ -515,6 +530,18 @@ misclassified by Majority but not by MinKL.
 \vskip -0.2in
 \end{figure}
 
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.95\linewidth]{figures/icml-uright-matrix-82.pdf}\\
+  \caption{uRight matrix}
+  \label{fig:uright-matrix}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+
 \subsection{MNIST}
 The MNIST dataset~\cite{Lecun1998} contains images of digits. Each
 example is a 28x28 grayscale image and there are a total of 60000
@@ -524,10 +551,21 @@ feature vector of each example corresponds to the top 100 PCA
 components of the preprocessed image. The Euclidean distance is used
 as the similarity measure in the neighborhood calculation.
 
-The test error rate we obtained from MinKL is .... while the test
-error rate from Majority is ... ($k = 5$). The MNIST dataset has
-$\phi$ equal to .... Figure~\ref{fig:mnist} shows the test error rates
-of the two algorithm obtained at different $k$.
+Figure~\ref{fig:mnist} shows the test error rates
+of the two algorithm obtained at different $k$.The $\phi$ of MNIST
+dataset is 0.05.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.95\linewidth]{figures/icml-mnist-error.pdf}
+  \caption{MNIST results}
+  \label{fig:mnist-results}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
 
 \subsection{SVHN}
 The SVHN dataset~\cite{Netzer2011} contains images of digits taken
@@ -535,10 +573,21 @@ from the Google street view data. It is considered a harder dataset
 than MNIST. Each example in SVHN is a 32x32 RGB image patch and there
 are a total of 73257 training examples and 26032 test examples in the
 dataset. For each example, HOG features~\cite{Dalal2005} are computed
-and combined into a feature vector. The Manhattan distance is used as
+and combined into a feature vector. We use 4x4 The Manhattan distance is used as
 the similarity measure in the neighborhood calculation.
 
 The results are summarized in Figure~\ref{}.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centering
+  \includegraphics[width=.95\linewidth]{figures/svhn-1.png}
+  \caption{SVHN results}
+  \label{fig:svhn-results}
+\end{center}
+\vskip -0.2in
+\end{figure}
 
 \section{Discussion}
 
@@ -550,6 +599,9 @@ surprising because the majority vote rule is known to be optimal
 asymptotically. However, in some applications where the number of
 training examples is limited, our approach has advantage over the
 majority rule.
+
+MNIST and SVHN have small $\phi$ but the noise is small and evenly distributed.
+
 
 As we expected, the MinKL approach performs well when $\phi$ is
 small. This gives us a simple way to check if a problem is suitable
