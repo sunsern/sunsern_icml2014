@@ -55,12 +55,12 @@
 
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
-\icmltitlerunning{CHANGE ME}
+\icmltitlerunning{Improving the kNN rule for finite training sets}
 
 \begin{document} 
 
 \twocolumn[
-\icmltitle{TBD}
+\icmltitle{Improving the kNN rule for finite training sets}
 
 % It is OKAY to include author information, even for blind
 % submissions: the style file will automatically remove it for you
@@ -76,13 +76,21 @@
 % You may provide any keywords that you 
 % find helpful for describing your paper; these are used to populate 
 % the "keywords" metadata in the PDF but will not be shown in the document
-\icmlkeywords{boring formatting information, machine learning, ICML}
+\icmlkeywords{kNN, minimizing KL-divergence, machine learning, ICML}
 
 \vskip 0.3in
 ]
 
-\begin{abstract} 
-TODO
+\begin{abstract}
+  Traditionally, the $k$-NN classification rule predicts a label based
+  on the majority of the labels in the neighborhood. While it can be
+  shown that the majority rule is optimal aymptotically, there is no
+  such guarantee for finite training sets. We propose a simple $k$-NN
+  rule that incorporates non-majority classes into the prediction. We
+  present a number of experiments on both synthetic datasets and
+  real-world datasets, including MNIST and SVHN. We show that our new
+  rule can achieve lower error rates compared to the majority rule in
+  many cases.
 \end{abstract} 
 
 \section{Introduction}
@@ -165,14 +173,16 @@ Section~\ref{sec:conclusion}.
 \newcommand{\Y}{\mathcal{Y}}
 \newcommand{\trainset}{\mathcal{S}}
 
-Let $\trainset = \{ (x_1,y_1,) \ldots (x_n,y_n)\}$ be a set of
+Let $\trainset = \{ (x_1,y_1,) \ldots (x_N,y_N)\}$ be a set of
 training examples where each instance $x_i$ comes from an example
-space $\X$ of which the distance between any two examples is measured by
-$d(\cdot,\cdot)$. Without loss of generality, we assume that each
-label $y_i$ takes on a value from $\Y = \{1,2,\ldots,m\}$.
+space $\X$ of which the distance between any two examples is measured
+by $d(\cdot,\cdot)$. Without loss of generality, we assume that each
+label $y_i$ takes on a value from $\Y = \{1,2,\ldots,m\}$. To simplify
+the analysis, we assume that the distribution of classes is uniform
+and the number of examples per class is denoted by $n$.
 
 \newcommand{\nh}{\mathcal{N}}
-\newcommand{\Pemp}{\widehat{\mathbf{P}}_{(x,n,k)}}
+\newcommand{\Pemp}{\widehat{\mathbf{P}}_{(x,\trainset,k)}}
 \newcommand{\Ptrue}{\mathbf{P}_{(x)}}
 
 Let $\nh_k(x)$ denote the neighborhood of size $k$ of an example $x
@@ -189,7 +199,7 @@ The $k$-NN rule predicts the label $\hat{y}$ such that
 \]
 
 For any example $x \in \X$, we can consider the true class
-distribution of $x$, $\Ptrue$ which is given by, for each $i \in \Y$,
+distribution of $x$, denoted by $\Ptrue$ which is given by, for each $i \in \Y$,
 \[
 \Ptrue(i) = \Pr(Y=i | X=x)
 \]
@@ -199,7 +209,7 @@ for every class label $i \in \Y$,
 \lim_{\substack{n \to \infty\\k \to \infty\\k/n \to 0}} \Pemp(i) = \Ptrue(i)
 \]
 Therefore, the majority rule is asymptotically optimal. However, in
-the finite sample case, it can be sub-optimal due to the discrepancy
+the finite sample scenario, it can be sub-optimal due to the discrepancy
 between the empirical distribution $\Pemp$ and the true distribution
 $\Ptrue$ as demonstrated by the toy example in
 Figure~\ref{fig:toy_example}.
@@ -208,64 +218,101 @@ Figure~\ref{fig:toy_example}.
 \label{sec:min_kl}
 
 \newcommand{\dkl}{D_{\mathrm{KL}}}
-\newcommand{\Qemp}{\widehat{\mathbf{Q}}_(j,n,k)}
-\newcommand{\Qtrue}{\mathbf{Q}_(j)}
+\newcommand{\Qemp}{\widehat{\mathbf{Q}}_{(j,\trainset,k)}}
 
-We propose a modification to the $k$-NN rule that predicts the class
-label based on the entire class distribution $\Pemp$ instead of just
-the mode of $\Pemp$. Given a training set $\trainset$ of size $n$ and
-the neighborhood of size $k$, we define, for each class $j$, an
-empirical center distribution $\Qemp$ as
+We propose a new $k$-NN rule that predicts the class label based on
+the entire class distribution $\Pemp$ instead of just the mode
+(majority) of $\Pemp$. We refer to this rule as the minimizing
+KL-divergence rule (MinKL). Given a training set $\trainset$ and the
+neighborhood of size $k$, we define, for each class $j$, an empirical
+center distribution $\Qemp$ as
 \[
-\Qemp(i) = \frac{\sum_{(x,j) \in \trainset_j} \Pemp(i)}{|\trainset_j|}
+\Qemp = \frac{\sum_{(x,j) \in \trainset_j} \Pemp}{|\trainset_j|}
 \]
-where $\trainset_j = \{ (x,y) \in S | y = j \}$.  To classify a new
-example $x$, the empirical class distribution $\Pemp$ is compared to
-each of the center distributions $\Qemp$ with respect to some distance
-measure $g(\cdot ; \cdot)$ and the class label that minimizes the
-distance is then predicted. More formally, the predicted label
-$\hat{y}$ is given by
+where $\trainset_j = \{ (x,y) \in \trainset | y = j \}$ consists of
+all examples with class label $j$.  To classify a new example $x$, the
+empirical class distribution $\Pemp$ is compared to each of the center
+distributions $\Qemp$ with respect to the KL-divergence $\dkl(\Pemp ||
+\Qemp)$ and the class label that minimizes the distance is then
+predicted. More formally, the predicted label $\hat{y}$ is given by
 \[
-\hat{y} = \arg\min_{j \in \Y} \: g(\Pemp ; \Qemp)
+\hat{y} = \arg\min_{j \in \Y} \: \dkl(\Pemp || \Qemp) 
 \]
-
-Technically, the choice of the function $g$ depends on the data but,
-in this paper, we will give a justification for when $g$ is the
-KL-divergence. The KL-divergence $\dkl$ between two
-distributions $\mathbf{P}$ and $\mathbf{Q}$ is defined by
+where the KL-divergence between two discrete distributions
+$\mathbf{p}$ and $\mathbf{q}$ is defined as
 \[
-\dkl(\mathbf{P} || \mathbf{Q}) = \sum_i \mathbf{P}(i) \log \frac{\mathbf{P}(i)}{\mathbf{Q}(i)}
+\dkl(\mathbf{p} || \mathbf{q}) = \sum_i \mathbf{p}(i) \log
+\frac{\mathbf{p}(i)}{\mathbf{q}(i)}
 \]
 
-\newcommand{\Pexpected}{\tilde{\mathbf{P}}^{(x,n,k)}}
+A summary of the algorithm is given in
+Algorithm~\ref{alg:minkl_training} and
+Algorithm~\ref{alg:minkl_predict}.
 
-Next, we will give a justification for our approach for finite $n$ and
-$k$. Let $\Qtrue$ denote the true center distribution for class $j$
+\newcommand{\Q}{\mathbf{Q}}
+
+\begin{algorithm}[tb]
+\caption{The MinKL $k$-NN rule: Training}
+\label{alg:minkl_training}
+\begin{algorithmic}[1]
+\REQUIRE{Training set $\trainset$ and $k$}
+\OUTPUT{The center distributions $\widehat{\Q}_j$ for all $j \in \Y$}
+\STATE $\widehat{\Q}_j \leftarrow \vec{0} \mbox{ for } j \in \Y$
+\FOR{each example $(x,j) \in \trainset$}
+\STATE $\widehat{\Q}_j \leftarrow \widehat{\Q}_j + \Pemp$
+\ENDFOR
+\STATE $\widehat{\Q}_j \leftarrow \widehat{\Q}_j / |\trainset_i|
+\mbox{ for all } j \in \Y$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[tb]
+\caption{The MinKL $k$-NN rule: Prediction}
+\label{alg:minkl_predict}
+\begin{algorithmic}[1]
+  \REQUIRE{Training set $\trainset$,\\
+    A test example $x$,\\
+    The center distributions $\widehat{\Q}_j$ for all $j \in \Y$ } 
+  \OUTPUT{Predicted label $\hat{y}$} 
+  \STATE $\hat{y} = \arg\min_{i \in \Y} \dkl(\Pemp || \widehat{\Q}_i)$
+\end{algorithmic}
+\end{algorithm}
+
+\newcommand{\Pexpected}{\overrightarrow{\mathbf{P}}_{(x,k)}}
+\newcommand{\Qexpected}{\overrightarrow{\mathbf{Q}}_{(j,k)}}
+
+To analyze our approach in the finite sample setup, we introduce a few
+more notations. Let $\Pexpected$ denote the expected class
+distribution of an example $x$ induced by a neighborhood of size $k$,
 which is given by
 \[
-\Qtrue = \int_x \Ptrue(j) \Ptrue
+\Pexpected = \mathbf{E}_{\trainset}[\Pemp]
 \]
-For finite $n$ and $k$, we define the expected class distribution $\Pexpected$ for an example
-$x$ as
+Similarly, let $\Qexpected$ denote the expected center distribution
+for examples of class $j$ defined by
 \[
-\Pexpected = \mathbf{E}[\Pemp]
+\Qexpected =\mathbf{E}_{\trainset}[\Qemp]
+\]
+Note that the expectation is taken over all possible training sets of
+size $N$.
+
+Ideally, the empirical distribution $\Pemp$ should be compared to the
+expected center distribution $\Qexpected$. However, in practice, we
+use $\Qemp$ as an estimate for $\Qexpected$. This is reasonable
+because $\Qemp$ for each class $j$ is estimated from a relatively
+large amount of examples in the training set.
+
+For any training set $\trainset$ and for any $k$, there exists some
+$\delta_k > 0$ such that
+\[
+\dkl(\Pexpected || \Qemp) < \delta_k \; \forall \; (x,j) \in \trainset
 \]
 
-
-
-
-
-
-
-
-We show that, when the true class distribution $\Ptrue$ for each
-example $x$ of class $j$ in the training set $\trainset$ is identical
-to $\Qemp$, the KL-divergence is optimal. The proof is
-given by Lemma~\ref{lemma:dkl} and Collorary~\ref{col:min_dkl}. 
+When $\delta_k = 0$, our algorithm can be justified by a direct
+application of Lemma~\ref{lemma:dkl} and Collorary~\ref{col:min_dkl}.
 
 \newcommand{\sampleYK}{y^k}
 \newcommand{\sampleEmpDist}{\mathbf{P}_{y^k}}
-\newcommand{\Q}{\mathbf{Q}}
 
 Let $\sampleYK = [y_1, \ldots, y_k]$ denote a sample of size $k$ drawn IID
 from a fixed distribution over $Y$ and let $\sampleEmpDist$ denote the
@@ -277,8 +324,8 @@ $\sampleYK$. Specifically,
 
 \begin{lemma}
 \label{lemma:dkl}
-For any distribution $\Q$ and for any sample $\sampleYK$ (not neccessarily
-drawn from $\Q$), the likelihood of $\sampleYK$ drawn from $\Q$ is given by
+For any distribution $\Q$ and for any sample $\sampleYK$, the
+likelihood of $\sampleYK$ drawn from $\Q$ is given by
 \[
 \Q(y^k) = 2^{-k(H(\sampleEmpDist) + \dkl\sampleEmpDist || \Q))}
 \]
@@ -315,20 +362,34 @@ the KL-divergence from $\sampleEmpDist$ to $\Q_{i^*}$ is minimized.
   \end{align*}
 \end{proof}
 
-We have justified the KL-divergence in the ideal situation where the
-class distribution $\Ptrue$ can be modelled perfectly by the
-prototypical distribution $\Qemp$. This is a very strong assumption
-and not likely to hold in practice. However, we can estimate how well
-$\Qemp$ can model the data in $\trainset$ using the following
-function.
-\[
-\phi(\trainset) = \frac{\sum_{(x,y) \in \trainset_j} \dkl(\Pemp ||
-  \Qemp)}{|\trainset_j| \log m} 
-\]
-We expect our approach to perform well when $\phi(\trainset)$ is
-small. 
+\newcommand{\Qempjstar}{\widehat{\mathbf{Q}}_{(j^*,\trainset,k)}}
 
-A summary of our algorithm is given in Algorithm~\ref{alg:minkl}.
+\iffalse
+However, when $\delta_k > 0$, we need to enforce a stronger assumption
+about the data in the training set in order to justify our
+algorithm. Suppose $j^*$ is the true class for an example
+$x$. Intuitively, our approach will be justified if the expected
+center distributions $\Qexpected$ for incorrect classes are far enough
+from the empirical distribution $\Pemp$. Specifically, suppose
+\begin{small}
+\[
+\dkl(\Pemp || \Pexpected) \le \dkl(\Pemp || \Qexpected) + \delta_k
+\; \forall j \ne j^*
+\]
+\end{small}
+We can then justify our approach using information geometry. For any
+$\delta_k > 0$, we have
+\[
+\dkl(\Pemp || \Pexpected) \le \dkl(\Pemp || \Qempjstar) + \delta_k
+\]
+Hence, it follows that 
+\begin{small}
+\[
+\dkl(\Pemp || \Qempjstar) \le \dkl(\Pexpected || \Qemp) \; \forall  j \ne j^*
+\]
+\end{small}
+\fi
+
 It is worth noting that our algorithm will reduce to the majority
 rule when the prototypical distribution
 $\Qemp$ is defined as 
@@ -340,22 +401,6 @@ where $\epsilon$ is a small constant. In this case, the non-majority
 examples do not contribution any information to the final
 prediction. Hence, the prediction will be made based solely on the
 majority.
-
-\begin{algorithm}
-\caption{The MinKL $k$-NN rule}
-\label{alg:minkl}
-\begin{algorithmic}[1]
-\REQUIRE{A training set $\trainset$ \\ A test example $\tilde{x}$ and its
-  neightborhood $\nh_k(\tilde{x})$}
-\OUTPUT{Predicted label $\hat{y}$}
-\STATE $\widehat{\Q}_i \leftarrow \vec{0} \mbox{ for } i \in \Y$
-\FOR{Each example $(x,j) \in \trainset$}
-\STATE $\widehat{\Q}_j \leftarrow \widehat{\Q}_j + \Pemp$
-\ENDFOR
-\STATE $\widehat{\Q}_i \leftarrow \widehat{\Q}_i / |\trainset_i| \mbox{ for } i \in \Y$
-\STATE $\hat{y} = \arg\min_{i \in \Y} \dkl(\widehat{\mathbf{P}}^{\tilde{x}} || \Q_i)$
-\end{algorithmic}
-\end{algorithm}
 
 \section{Experiments}
 \label{sec:results}
@@ -423,9 +468,8 @@ called \textbf{SYN-3}. Similar to \textbf{SYN-1}, each instance of
 \textbf{SYN-3} is one-dimensional. However, the generating
 distribution for class $i$ is a mixture of two normal distributions
 centered at $i$ and $i+3$ and the mixing coefficient is 0.8 and 0.2
-respectively. \textbf{SYN-3} is intended for simulating when the true
-class distributions $\Ptrue$ of the examples with a specific label
-cannot be modelled perfectly by $\Qtrue$.  
+respectively. \textbf{SYN-3} is intended for simulating when
+$\delta_k > 0$.  
 
 In Figure~\ref{fig:synthetic}, we compare the error rates of MinKL and
 Majority using different $n$ and $k$ for each dataset. For each $n$,
@@ -608,26 +652,51 @@ both MinKL and Majority obtained using different $k$.
 \section{Discussion}
 \label{sec:discussion}
 
-In the experiments on \textbf{SYN-1} and \textbf{SYN-2}, we observed
+In our experiments with \textbf{SYN-1} and \textbf{SYN-2}, we observed
 that MinKL performs significantly better than Majority when $n$ is
 small. This result also confirms our intuition we have on the toy
 example in Figure~\ref{fig:toy_example}. Our explanation for this
-boost in performance is the fact that, for small $n$ (also implied a
-small $k$), the majority rule is prone to error because the prediction
-is based on solely the majority of the empirical class distribution
-$\Pemp$ induced from a relatively small neighborhood; while the MinKL
-rule makes the prediction based on the entire class distribution. As
-$n$ increases, the performance gap between the two rules decreases and
-the error rate of both rules converge to the Bayes error.
+boost in performance is the fact that, for small $n$ (implied a small
+$k$), the majority rule is prone to error because the prediction is
+based on solely the majority of the empirical class distribution
+$\Pemp$ induced from a relatively small $k$; while the MinKL
+rule makes the prediction based on the entire class distribution.
 
+From our analysis in Section~\ref{sec:min_kl}, we show that our
+approach will perform optimally when the training set has $\delta_k =
+0$. However, when $\delta_k$ is small relative to the distance between
+the center distributions of different classes, we expect our approach
+to perform reasonably well. In \textbf{SYN-3}, we deliberately
+designed the dataset such that its $\delta_k$ is quite large. As
+expected, the error rates for our approach are inferior to those of
+the majority rule even when $n$ is small.
+
+
+% why Syn-3 fail
 In a sense, our approach naturally incoporates the infomation from the
 label space into the classification. The label space information is
 encoded in the form of the center distribution $\Qemp$. The
-performance of our approach depends on how different the prototypical
-neighborhood distributions of different classes are. If the
+performance of our approach depends on how well the center
+distribution $\Qemp$ can model the examples of the
+class.
+
+
+neighborhood distributions of different classes are. 
+
+
+If the
 prototypical distributions are similar to each other, then our
 approach will not perform well. A workaround is to maintain multiple
 prototypical distributions per class.
+
+
+
+
+As $n$ increases, the performance gap between the two rules decreases and
+the error rate of both rules converge to the Bayes error.
+
+
+
 
 We suspect that our approach will be more beneficial to problems with
 a large number of classes and the confusions between classes are
