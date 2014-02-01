@@ -55,12 +55,12 @@
 
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
-\icmltitlerunning{Improving the kNN rule for finite training sets}
+\icmltitlerunning{Improving the kNN Rule for Finite Training Sets}
 
 \begin{document} 
 
 \twocolumn[
-\icmltitle{Improving the kNN rule for finite training sets}
+\icmltitle{Improving the kNN Rule for Finite Training Sets}
 
 % It is OKAY to include author information, even for blind
 % submissions: the style file will automatically remove it for you
@@ -84,7 +84,7 @@
 \begin{abstract}
   Traditionally, the $k$-NN classification rule predicts a label based
   on the majority of the labels in the neighborhood. While it can be
-  shown that the majority rule is optimal aymptotically, there is no
+  shown that the majority rule is optimal asymptotically, there is no
   such guarantee for finite training sets. We propose a simple $k$-NN
   rule that incorporates non-majority classes into the prediction. We
   present a number of experiments on both synthetic datasets and
@@ -97,7 +97,7 @@
 \label{sec:intro}
 
 We consider the $k$-nearest neighbor ($k$-NN) classification rule for
-multiclass classification problems where the number of classes $m >
+multi-class classification problems where the number of classes $m >
 2$. Given a set of training examples, the $k$-NN rule predicts the
 label of a new example with the majority of the class labels among its
 $k$ nearest neighbors. Fix and Hodges~\cite{Fix1951} show that,
@@ -106,8 +106,8 @@ choosing a large enough $k$ but small compared to the number of
 examples $n$. Nonetheless, when $n$ is small, there is no guarantee of
 how well the $k$-NN algorithm will perform. 
 
-Additionaly, Cover and Hart~\cite{Cover1967} show that, when $k = 1$,
-the aymptotic error rate of the $1$-NN rule is upperbounded by $r^*(2
+Additionally, Cover and Hart~\cite{Cover1967} show that, when $k = 1$,
+the asymptotic error rate of the $1$-NN rule is upperbounded by $r^*(2
 - \frac{m}{m-1}r^*)$. This result suggests that at least a half of the
 class information is contained in the nearest neighbor. When the
 nearest neighbor does not have all of the class information, it is
@@ -138,10 +138,10 @@ have been class A.
 \vskip 0.2in
 \begin{center}
 \centerline{\includegraphics[width=\columnwidth]{figures/toy_example.eps}}
-\caption{A toy example showing that the majarity rule (ignoring
+\caption{A toy example showing that the majority rule (ignoring
   information about class C in the neighborhood) can be
   sub-optimal. Based on the majority rule, the example $x$ of class A
-  can be misclassified as class B. However, the rare occurences of
+  can be misclassified as class B. However, the rare occurrences of
   examples of class C in the neighborhood of $x$ can provide
   useful information regarding the true label of $x$.}
 \label{fig:toy_example}
@@ -152,7 +152,7 @@ have been class A.
 Our approach is related to work on learning label embeddings~
 \cite{Collins2009, Bengio2010}. The main difference is that our approach is far
 simpler, does not require any convex optimizations and can be
-seemlessly integrated into the $k$-NN framework. Another related work
+seamlessly integrated into the $k$-NN framework. Another related work
 is \cite{Bilmes2001} which introduces a bias term to the likelihood ratio
 testing which is justified by the difference between the estimated and
 the true class conditional probability.
@@ -281,7 +281,7 @@ Algorithm~\ref{alg:minkl_predict}.
 \newcommand{\Pexpected}{\overrightarrow{\mathbf{P}}_{(x,k)}}
 \newcommand{\Qexpected}{\overrightarrow{\mathbf{Q}}_{(j,k)}}
 
-To analyze our approach in the finite sample setup, we introduce a few
+To analyze our approach in the finite sample setting, we introduce a few
 more notations. Let $\Pexpected$ denote the expected class
 distribution of an example $x$ induced by a neighborhood of size $k$,
 which is given by
@@ -363,6 +363,11 @@ the KL-divergence from $\sampleEmpDist$ to $\Q_{i^*}$ is minimized.
 \end{proof}
 
 \newcommand{\Qempjstar}{\widehat{\mathbf{Q}}_{(j^*,\trainset,k)}}
+
+When $\delta_k > 0$, our approach can still be justified using
+stronger assumptions about the data. Ultimately, we expect our
+approach to perform well as long as $\delta_k$ is small compared to
+the distances between the center distributions.
 
 \iffalse
 However, when $\delta_k > 0$, we need to enforce a stronger assumption
@@ -525,7 +530,7 @@ and $t$ is the timestamp of each sample
 point. Figure~\ref{fig:uright-examples} shows some examples of the
 handwriting trajectories. There are 9945 examples in the dataset and
 the distribution of the class labels is fairly uniform. The similarity
-between two examples is measured by the dynamic time wraping (DTW)
+between two examples is measured by the dynamic time warping (DTW)
 distance~\cite{Bahlmann2004}.
 
 Using $k = 5$, the average error rates of MinKL and Majority for each
@@ -577,7 +582,7 @@ classified by MinKL.
 \vskip -0.2in
 \end{figure}
 
-\begin{figure}[hb]
+\begin{figure*}[tb]
 \vskip 0.2in
 \begin{center}
 \centering
@@ -595,14 +600,14 @@ classified by MinKL.
 \label{fig:matrix}
 \end{center}
 \vskip -0.2in
-\end{figure}
+\end{figure*}
 
 
 \subsection{MNIST}
 The MNIST dataset~\cite{Lecun1998} contains images of handwritten
 digits. Each example is a 28x28 grayscale image. There are 60000
 training examples and 10000 test examples included in the dataset. We
-prepropressed the data by de-skewing and downsampling the images. After
+preprocessed the data by de-skewing and downsampling the images. After
 the preprocessing, we ran PCA on the training data. The feature vector
 of each example corresponds to the coefficients of the first 100 PCA
 components. The Euclidean distance is used as the similarity measure
@@ -669,45 +674,25 @@ the center distributions of different classes, we expect our approach
 to perform reasonably well. In \textbf{SYN-3}, we deliberately
 designed the dataset such that its $\delta_k$ is quite large. As
 expected, the error rates for our approach are inferior to those of
-the majority rule even when $n$ is small.
+the majority rule even when $n$ is small. A workaround is to increase
+the representation power of the center distribution by allowing
+multiple centers per class.
 
+The performance gap between the MinKL rule and the majority rule for
+MNIST is very small, especially for small $k$. This is due to the fact that the center
+distributions for the MNIST dataset are very close the the dirac delta
+function in which case the MinKL reduces to the majority
+rule. Figure~\ref{fig:matrix} depicts the center distributions in each
+row of the matrix. For MNIST, the mass is heavily concentrated on the
+diagonal.
 
-% why Syn-3 fail
-In a sense, our approach naturally incoporates the infomation from the
-label space into the classification. The label space information is
-encoded in the form of the center distribution $\Qemp$. The
-performance of our approach depends on how well the center
-distribution $\Qemp$ can model the examples of the
-class.
-
-
-neighborhood distributions of different classes are. 
-
-
-If the
-prototypical distributions are similar to each other, then our
-approach will not perform well. A workaround is to maintain multiple
-prototypical distributions per class.
-
-
-
-
-As $n$ increases, the performance gap between the two rules decreases and
-the error rate of both rules converge to the Bayes error.
-
-
-
-
-We suspect that our approach will be more beneficial to problems with
-a large number of classes and the confusions between classes are
-non-uniform.
-
-Our approach does not have a consistency gaurantee. It is
-possible that our approach will be sub-optimal when the number of
-training examples goes to infinity because the prototypical
-distribution model is incorrect or insufficent. We do not worry
-about this problem that much since we see our approach being used
-in a small sample scenario.
+Another factor that plays a role in the performance of MinKL is the
+distances between the center distributions. If they are far away from
+each other, then we expect our approach to work well. This effect is
+also demonstrated in Figure~\ref{fig:matrix}. The rows in the uRight
+matrix is more distinct than the rows in the SVHN matrix. The
+improvement we obtained on the uRight dataset is significantly larger
+than what we obtained on the SVHN dataset.
 
 In practice, other divergences might work better than the
 KL-divergence. The KL-divergence is considered a special case of a
@@ -717,31 +702,42 @@ Alpha-divergence~\cite{Cichocki2010}, which is given by
 D^{(\alpha)}_A (p||q) = \frac{1}{\alpha(\alpha - 1)}\left( \sum_1^n
   p^{\alpha}_i q^{1-\alpha}_i - 1\right), \; \alpha \in \mathrm{R} \ \{0,1\}
 \]
-The KL-divergence can be expressed as $D_{KL} (p || q) = \lim_{\alpha
+The KL-divergence can be expressed as $\dkl(p || q) = \lim_{\alpha
   \rightarrow 1} D^{(\alpha)}_A (p || q)$.  For the uRight dataset, we
 were able to obtain even lower error rate by using Alpha-divergence
 with $\alpha = 2$.
 
-Our approach can be applied to other classification algorithms as
-well. The $k$-NN algorithm is very computational expensive in
-classifying a new example. In some applications, it is important to be
-able to classify new examples quickly. A simple modification to the
-$k$-NN algorithm that significanly reduces the classication time is to
-keep only a small number of representatives per class and discard the
-rest of the examples. This algorithm is called the $k$
-nearest-centroid algorithm ($k$-NC) where only the $k$-centroids are
-kept as the class representatives. In the $k$-NC, the class
-distribution $\mathbf{P}_x$ can be estimating by
+Technically, the minimizing KL-divergence idea can be applied to other
+classification algorithms as well. The $k$-NN algorithm is very
+computational expensive in classifying a new example. In some
+applications, it is important to be able to classify new examples
+quickly. A simple modification to the $k$-NN algorithm that
+significantly reduces the classification time is to keep only a small
+number of representatives per class and discard the rest of the
+examples. This algorithm is called the $k$ nearest-centroid algorithm
+($k$-NC) where only the $k$-centroids are kept as the class
+representatives. In the $k$-NC, the class distribution $\mathbf{P}_x$
+can be estimating by
 \[
-\mathbf{P}_x(j) = \frac{e^{d(x,C(j))}}{\sum_i e^{d(x, C(i))} }
+\widehat{mathbf{P}}_x(j) = \frac{e^{d(x,C(j))}}{\sum_i e^{d(x, C(i))} }
 \]
-We can apply MinKL to the class posterior computed this way. 
-
+Then we can apply MinKL rule to the class posterior computed above. 
 
 \section{Conclusions}
 \label{sec:conclusion}
-
-We suggest a simple modification to the $k$-NN algorithm.
+We proposed a simple $k$-NN rule that predicts based on the entire
+empirical class distribution rather than the majority in the
+neighborhood. The algorithm can be described as follows. Given a
+training set, we estimate the center distribution for each class. To
+classify a new example, we measure the KL-divergence between the
+empirical distribution induced by the neighborhood and the center
+distribution of each class. The class that minimized the KL-divergence
+is then predicted. In a sense, our approach is a simple method for
+leveraging the class information in the label space.  We justified our
+approach in the finite sample setting under a certain assumption about
+the data. Finally, we show experimental results comparing the error
+rates of our approach to the majority rule. We found that our approach
+managed to outperform the majority rule in many cases.
 
 \bibliography{library}
 \bibliographystyle{icml2014}
